@@ -183,10 +183,25 @@
   window.__evony = () => run;
   const showBest = () => ($('bestTxt').textContent = record.dist ? `最佳 ${record.dist} 公尺・${record.giants} 巨人` : '');
 
+  // Coins carry over between runs and buy a bigger starting army, like
+  // Count Masters. Giants are sized from your real army, so the balance holds.
+  let meta = store.get('meta', { coins: 0, recruit: 0 });
+  const startArmy = () => 10 + meta.recruit * 5;
+  const recruitCost = () => 30 * (meta.recruit + 1);
+  function upgradeHTML() {
+    return `<p style="margin:8px 0 4px">金幣 <b>${meta.coins}</b>　・　徵兵 Lv.${meta.recruit}（起始兵力 ${startArmy()}）</p>
+      <div class="row"><button id="bRecruit" ${meta.coins < recruitCost() ? 'disabled' : ''}>徵兵升級：起始兵力 +5（${recruitCost()} 金幣）</button></div>`;
+  }
+  function bindUpgrade(refresh) {
+    const b = $('bRecruit');
+    if (b) b.onclick = () => { if (meta.coins < recruitCost()) return; meta.coins -= recruitCost(); meta.recruit++; store.set('meta', meta); refresh(); };
+  }
+
   function start() {
-    run = { seed: (Math.random() * 1e9) | 0, z: 0, army: 10, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
-      items: [], giants: [], giantSegs: new Set(), walled: new Set(), blocks: 0, beaten: 0, fight: null };
-    genBlock(0, 10, 0);
+    const army = startArmy();
+    run = { seed: (Math.random() * 1e9) | 0, z: 0, army, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
+      items: [], giants: [], giantSegs: new Set(), walled: new Set(), blocks: 0, beaten: 0, fight: null, coins: 0, coinFrac: 0 };
+    genBlock(0, army, 0);
     $('box').classList.remove('show');
   }
 
@@ -268,6 +283,8 @@
           it.left = it.left == null ? it.n : it.left;
           const kill = Math.min(it.left, Math.ceil(it.n * share));
           it.left -= kill;
+          run.coinFrac += kill * 0.25;
+          if (run.coinFrac >= 1) { run.coins += Math.floor(run.coinFrac); run.coinFrac %= 1; }
           run.army -= kill;
           if (it.left <= 0) it.done = true;
         } else if (it.z > before && it.z <= run.z) {
@@ -292,6 +309,7 @@
         g.done = true;
         g.fall = 0;
         run.beaten++;
+        run.coins += 10 + run.beaten * 5;
         run.phase = 'run';
         run.banner = { text: `擊敗巨人！`, sub: `第 ${run.beaten} 個`, t: 0 };
         burst(g);
@@ -307,14 +325,19 @@
     if (isBest) { record = { dist, giants: run.beaten }; store.set('best', record); }
     showBest();
     const g = nextGiant();
-    setTimeout(() => {
+    meta.coins += run.coins;
+    store.set('meta', meta);
+    const showOver = () => {
       $('boxCard').innerHTML = `<h2>大軍潰敗</h2>
         <p>你前進了 <b>${dist}</b> 公尺，擊敗 <b>${run.beaten}</b> 個巨人。${isBest ? '<br><b style="color:#ff9f1a">新紀錄！</b>' : `<br>最佳紀錄：${record.dist} 公尺`}</p>
-        <p>${g && run.z >= g.z - 1 ? `擋路的巨人有 ${g.n} 名士兵。` : '別讓敵軍把你的士兵拚光。'}看清楚兩條跑道再決定，牆只在缺口處能穿越。</p>
-        <div class="row"><button class="primary" id="bAgain">再出發</button></div>`;
+        <p>${g && run.z >= g.z - 1 ? `擋路的巨人有 ${g.n} 名士兵。` : '別讓敵軍把你的士兵拚光。'}看清楚兩條跑道再決定。</p>
+        <p>這一趟獲得 <b style="color:#c98a00">${run.coins}</b> 金幣。</p>${upgradeHTML()}
+        <div class="row" style="margin-top:10px"><button class="primary" id="bAgain">再出發</button></div>`;
       $('box').classList.add('show');
       $('bAgain').onclick = start;
-    }, 700);
+      bindUpgrade(showOver);
+    };
+    setTimeout(showOver, 700);
   }
 
   // ---- Input: tap a side, swipe, or arrow keys ----
@@ -567,6 +590,7 @@
     ctx.fillRect(70, 14, (W - 140) * Math.min(1, Math.max(0, (z - from) / (ng.z - from))), 8);
     text(`${Math.floor(z / 10)} 公尺`, 36, 18, 13, '#fff', '#0006');
     text(`巨人 ${run.beaten}`, W - 36, 18, 13, '#fff', '#0006');
+    text(`金幣 ${run.coins}`, W - 40, 38, 12, '#ffd23f', '#0006');
     if (run.banner) {
       const b = run.banner, pop = Math.min(1, b.t * 5), fade = b.t > 1.2 ? 1 - (b.t - 1.2) / 0.4 : 1;
       ctx.globalAlpha = Math.max(0, fade);
@@ -609,8 +633,10 @@
       <li>小心誘人的 +3，後面常常藏著大軍。</li>
       <li>這條路沒有盡頭。每走一段就有巨人擋路，兵力比巨人軍團多才能通過；不必每次都選到最好的路，但選得越好，領先越多。越往前巨人越強、行軍越快。</li>
       <li>士兵拚光就結束，看你能走多遠。</li>
-    </ul><button class="primary" id="bGo">${run && run.phase !== 'end' ? '繼續' : '出發'}</button>`;
+      <li>擊敗敵軍和巨人能賺金幣，金幣會保留下來，可以升級「徵兵」增加起始兵力。</li>
+    </ul>${run && run.phase !== 'end' ? '' : upgradeHTML()}<button class="primary" id="bGo" style="margin-top:10px">${run && run.phase !== 'end' ? '繼續' : '出發'}</button>`;
     $('box').classList.add('show');
+    bindUpgrade(showHelp);
     $('bGo').onclick = () => (run && run.phase !== 'end' ? $('box').classList.remove('show') : start());
   }
 
