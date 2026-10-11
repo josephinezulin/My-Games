@@ -202,6 +202,19 @@
   }
   function float(text, color) { run.floats.push({ text, color, t: 0 }); }
 
+  // Defeating a giant throws a burst of gold confetti from where he stood.
+  function burst(g) {
+    const pb = proj(0, g.z + 60);
+    if (!pb) return;
+    const s = pb[2] * 200;
+    run.parts = run.parts || [];
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 260;
+      run.parts.push({ x: pb[0], y: pb[1] - s * 0.6, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 200, t: 0,
+        c: ['#ffd23f', '#ffb400', '#fff3b0', '#ff8a3d'][i % 4], r: 3 + Math.random() * 4 });
+    }
+  }
+
   // Troop-count feedback: the counter tweens toward the real number, pops and
   // flashes green on gains and red on losses; losses also tint the screen edge
   // and buzz the phone (throttled so hordes don't vibrate nonstop).
@@ -232,6 +245,15 @@
     run.floats = run.floats.filter(f => f.t < 0.9);
     run.bump = Math.max(0, run.bump - dt * 4);
     feedback(dt);
+    for (const gg of run.giants) {
+      if (gg.hit) gg.hit = Math.max(0, gg.hit - dt * 6);
+      if (gg.fall != null && gg.fall < 1) gg.fall = Math.min(1, gg.fall + dt * 1.4);
+    }
+    if (run.banner) { run.banner.t += dt; if (run.banner.t > 1.6) run.banner = null; }
+    if (run.parts) {
+      for (const q of run.parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 520 * dt; }
+      run.parts = run.parts.filter(q => q.t < 1.2);
+    }
     run.x += ((run.lane ? 0.5 : -0.5) - run.x) * Math.min(1, dt * 10);
     const g = nextGiant();
     if (run.phase === 'run') {
@@ -264,12 +286,15 @@
       const k = Math.max(1, Math.ceil(Math.min(run.army, g.left) * dt * 2.5));
       run.army -= k;
       g.left -= k;
+      g.hit = 1;
       if (run.army <= 0) { run.army = 0; return gameOver(); }
       if (g.left <= 0) {
         g.done = true;
+        g.fall = 0;
         run.beaten++;
         run.phase = 'run';
-        float(`擊敗巨人！（${run.beaten}）`, '#ffd23f');
+        run.banner = { text: `擊敗巨人！`, sub: `第 ${run.beaten} 個`, t: 0 };
+        burst(g);
       }
     }
   }
@@ -437,11 +462,21 @@
 
     // Giants waiting on the road
     for (const g of run.giants) {
-      if (g.done || g.z > far + 200) continue;
-      const pb = proj(0, g.z + 60);
-      if (!pb) continue;
-      const foes = g.left == null ? g.n : g.left;
-      const s = pb[2] * 200;
+      if ((g.done && !(g.fall < 1)) || g.z > far + 200) continue;
+      const pb0 = proj(0, g.z + 60);
+      if (!pb0) continue;
+      const foes = g.done ? 0 : g.left == null ? g.n : g.left;
+      const s = pb0[2] * 200;
+      // Shake when hit; tip over and fade when defeated
+      const shake = g.hit ? Math.sin(run.t * 70) * s * 0.04 * g.hit : 0;
+      const pb = [pb0[0] + shake, pb0[1], pb0[2]];
+      ctx.save();
+      if (g.done) {
+        ctx.globalAlpha = 1 - g.fall;
+        ctx.translate(pb[0], pb[1]);
+        ctx.rotate(g.fall * 1.4);
+        ctx.translate(-pb[0], -pb[1]);
+      }
       for (let i = 0; i < Math.min(40, Math.ceil(foes / 5)); i++) {
         const p = proj(-0.9 + (i % 10) * 0.2, g.z + 20 + Math.floor(i / 10) * 12);
         if (p) soldier(p[0], p[1], Math.max(1.5, p[2] * 8), '#e8473f', '#b92d26');
@@ -453,8 +488,30 @@
       ctx.fillRect(pb[0] - s * 0.32, pb[1] - s * 0.3, s * 0.64, s * 0.12);
       ctx.strokeStyle = '#b92d26'; ctx.lineWidth = Math.max(1, s * 0.03);
       ctx.beginPath(); ctx.moveTo(pb[0] - s * 0.1, pb[1] - s * 0.8); ctx.lineTo(pb[0] + s * 0.12, pb[1] - s * 0.55); ctx.stroke();
-      text(`巨人軍團 ${Math.max(0, foes)}`, pb[0], pb[1] - s * 1.35, Math.max(10, s * 0.14), '#fff', '#e8473f');
+      if (g.hit) {
+        // White hit flash over the giant's body
+        ctx.globalAlpha = (g.done ? 1 - g.fall : 1) * g.hit * 0.7;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(pb[0], pb[1] - s * 0.55, s * 0.32, s * 0.4, 0, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(pb[0], pb[1] - s * 1.05, s * 0.16, 0, 7); ctx.fill();
+        ctx.globalAlpha = g.done ? 1 - g.fall : 1;
+      }
+      ctx.restore();
+      if (!g.done) {
+        // Health bar: how much of the giant's army is left
+        const bw = Math.max(60, s * 0.9), bx = pb0[0] - bw / 2, by = pb0[1] - s * 1.5 - 14;
+        ctx.fillStyle = '#0006'; ctx.fillRect(bx - 2, by - 2, bw + 4, 12);
+        ctx.fillStyle = '#e8473f'; ctx.fillRect(bx, by, bw * Math.max(0, foes / g.n), 8);
+        text(`巨人軍團 ${Math.max(0, foes)}`, pb0[0], by - 14, Math.max(11, s * 0.14), '#fff', '#e8473f');
+      }
     }
+    // Confetti from a defeated giant
+    for (const q of run.parts || []) {
+      ctx.globalAlpha = Math.max(0, 1 - q.t / 1.2);
+      ctx.fillStyle = q.c;
+      ctx.fillRect(q.x - q.r / 2, q.y - q.r / 2, q.r, q.r * 1.6);
+    }
+    ctx.globalAlpha = 1;
 
     // Player army
     const pp = proj(run.x, z);
@@ -499,6 +556,13 @@
     ctx.fillRect(70, 14, (W - 140) * Math.min(1, Math.max(0, (z - from) / (ng.z - from))), 8);
     text(`${Math.floor(z / 10)} 公尺`, 36, 18, 13, '#fff', '#0006');
     text(`巨人 ${run.beaten}`, W - 36, 18, 13, '#fff', '#0006');
+    if (run.banner) {
+      const b = run.banner, pop = Math.min(1, b.t * 5), fade = b.t > 1.2 ? 1 - (b.t - 1.2) / 0.4 : 1;
+      ctx.globalAlpha = Math.max(0, fade);
+      text(b.text, W / 2, H * 0.32, 40 * (0.6 + 0.4 * pop), '#ffd23f', '#7a3a00');
+      text(b.sub, W / 2, H * 0.32 + 38, 18, '#fff', '#7a3a00');
+      ctx.globalAlpha = 1;
+    }
     if (run.phase === 'run') {
       const wallAhead = run.walled.has(segOf(z + 160)) && !isWalled(z);
       if (isWalled(z) && (z - 200) % SEG < GAP) text('牆來了！最後機會換跑道', W / 2, 46, 16, '#fff', '#e8473f');
