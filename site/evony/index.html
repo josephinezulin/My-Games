@@ -75,9 +75,10 @@
   // The bridge never ends. It is built in blocks of segments; a wall splits
   // the two lanes and opens only for a short gap at the start of each segment,
   // so each segment is a commitment. Every block ends with a giant whose army
-  // is a share of the best route through that block, starting from the troops
-  // you will actually have, so careful play can always get through. The share
-  // grows and the march speeds up the further you go.
+  // is sized from a typical route (the geometric mean of the two lanes, segment
+  // by segment, since gates multiply), starting from the troops you will
+  // actually have, and never more than 60% of the best route. Ordinary play gets through; good play builds
+  // a big lead. The giants grow and the march speeds up the further you go.
   function apply(n, it) {
     if (it.kind === 'step') return n + 1;
     if (it.kind === 'gate') return it.op === 'x' ? n * it.n : it.op === '+' ? n + it.n : Math.max(0, n - it.n);
@@ -101,14 +102,14 @@
       } else if (kind === 'gate') {
         items.push({ kind: 'gate', lane, z: z0 + 60, op: '+', n: Math.max(5, Math.round(A * (0.2 + r() * 0.4))) });
       } else if (kind === 'mult') {
-        items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.max(3, Math.round(A * (0.1 + r() * 0.2))) });
+        items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.max(2, Math.round(A * (0.05 + r() * 0.1))) });
         items.push({ kind: 'gate', lane, z: z0 + 170, op: 'x', n: 2 });
       } else if (kind === 'horde') {
-        items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.max(6, Math.round(A * (0.3 + r() * 0.5))), len: 120 });
+        items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.max(3, Math.round(A * (0.15 + r() * 0.25))), len: 120 });
       } else {
         // Like the ad: a tempting +3 right before a big horde.
         items.push({ kind: 'gate', lane, z: z0 + 30, op: '+', n: 3 });
-        items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.max(8, Math.round(A * (0.5 + r() * 0.5))), len: 190 });
+        items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.max(4, Math.round(A * (0.25 + r() * 0.3))), len: 190 });
       }
     });
     return items;
@@ -120,17 +121,22 @@
       const A = Math.max(10, army);
       const items = [];
       for (let k = 0; k < BLOCK; k++) items.push(...makeSegment(s0 + k, A, r));
-      let best = army, ok = true;
+      const through = (k, lane, n) => items.filter(it => it.lane === lane && segOf(it.z) === s0 + k).sort((x, y) => x.z - y.z)
+        .reduce((m, it) => (m <= 0 ? m : apply(m, it)), n);
+      let best = army, avg = army, ok = true;
       for (let k = 0; k < BLOCK; k++) {
-        best = Math.max(...[0, 1].map(lane => items.filter(it => it.lane === lane && segOf(it.z) === s0 + k).sort((x, y) => x.z - y.z)
-          .reduce((n, it) => (n <= 0 ? n : apply(n, it)), best)));
-        if (best <= 0) ok = false;
+        // Neither lane may wipe out an average army, so one wrong pick is never fatal.
+        const a0 = through(k, 0, avg), a1 = through(k, 1, avg);
+        if (a0 <= 0 || a1 <= 0) ok = false;
+        best = Math.max(through(k, 0, best), through(k, 1, best));
+        avg = Math.sqrt(Math.max(1, a0) * Math.max(1, a1));
       }
-      if (!ok || (best < army * 1.3 + 10 && v < 200)) continue;
+      if ((!ok || best < army * 1.3 + 10) && v < 300) continue;
       const gSeg = s0 + BLOCK;
-      const factor = 0.6 + Math.min(0.3, d * 0.04);
+      const factor = 0.5 + Math.min(0.25, d * 0.02);
+      const n = Math.max(5, Math.round(Math.min(avg * factor, best * 0.6)));
       run.items.push(...items);
-      run.giants.push({ z: 200 + gSeg * SEG + 180, n: Math.max(6, Math.round(best * factor)), seg: gSeg, done: false, best });
+      run.giants.push({ z: 200 + gSeg * SEG + 180, n, seg: gSeg, done: false, best, avg: Math.round(avg) });
       run.giantSegs.add(gSeg);
       return;
     }
@@ -143,9 +149,9 @@
   const showBest = () => ($('bestTxt').textContent = record.dist ? `最佳 ${record.dist} 公尺・${record.giants} 巨人` : '');
 
   function start() {
-    run = { seed: (Math.random() * 1e9) | 0, z: 0, army: 5, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
+    run = { seed: (Math.random() * 1e9) | 0, z: 0, army: 10, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
       items: [], giants: [], giantSegs: new Set(), blocks: 0, beaten: 0, fight: null };
-    genBlock(0, 5, 0);
+    genBlock(0, 10, 0);
     $('box').classList.remove('show');
   }
 
@@ -449,7 +455,7 @@
       <li>牆只在每段開頭留有缺口，看到「可以換跑道！」時點左右兩側或滑動切換。</li>
       <li>藍色 +1 階梯一步一兵，綠色門加兵或翻倍，紅色門減兵；紅色敵軍會拚掉你的士兵。</li>
       <li>小心誘人的 +3，後面常常藏著大軍。</li>
-      <li>這條路沒有盡頭。每走一段就有巨人擋路，兵力比巨人軍團多才能通過；越往前巨人越強、行軍越快。</li>
+      <li>這條路沒有盡頭。每走一段就有巨人擋路，兵力比巨人軍團多才能通過；不必每次都選到最好的路，但選得越好，領先越多。越往前巨人越強、行軍越快。</li>
       <li>士兵拚光就結束，看你能走多遠。</li>
     </ul><button class="primary" id="bGo">${run && run.phase !== 'end' ? '繼續' : '出發'}</button>`;
     $('box').classList.add('show');
