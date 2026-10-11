@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>色彩配對</title>
+<meta name="description" content="色彩配對：用顏料桶調出和目標一模一樣的顏色。">
+<style>
+  :root { --ink: #3a2e28; --muted: #8a7c70; --panel: #fffaf2; --accent: #ff6a3d; --wood: #c98d55; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+    background: linear-gradient(180deg, #d8d2cb 0%, #cfc7bd 38%, #a9744a 38.2%, #8f5f3a 44%, #e7e1d9 44.2%, #dcd5cc 100%);
+    display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none;
+  }
+  nav.games { width: 100%; max-width: 480px; padding: 8px 16px 0; font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
+  nav.games a { color: var(--ink); opacity: .6; text-decoration: none; font-weight: 600; }
+  nav.games a.on { opacity: 1; text-decoration: underline; }
+  header { width: 100%; max-width: 480px; padding: 4px 16px; display: flex; align-items: center; justify-content: space-between; }
+  h1 { margin: 0; font-size: 19px; font-weight: 900; }
+  .game { flex: 1; width: 100%; max-width: 480px; display: flex; flex-direction: column; align-items: center; min-height: 0; padding: 0 12px 10px; }
+  #target { width: 100%; flex: 1.05; min-height: 0; }
+  .easel { position: relative; width: min(78%, 330px); aspect-ratio: 1.15; flex: 0 0 auto; }
+  .easel::before, .easel::after { content: ""; position: absolute; width: 10px; background: var(--wood); top: -18px; bottom: -16px; border-radius: 4px; z-index: 0; }
+  .easel::before { left: 18%; transform: rotate(4deg); } .easel::after { right: 18%; transform: rotate(-4deg); }
+  #paint { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 6px; box-shadow: 0 10px 24px #0004; background: #1d1b1a; }
+  .ledge { position: absolute; left: -4%; right: -4%; bottom: -14px; height: 14px; background: #b77b46; border-radius: 4px; z-index: 2; box-shadow: 0 4px 8px #0003; }
+  .info { margin: 22px 0 28px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+  .info b { color: var(--ink); }
+  .buckets { display: flex; gap: 10px; justify-content: center; width: 100%; }
+  .bucket { position: relative; flex: 1; max-width: 108px; cursor: pointer; transition: transform .1s; -webkit-tap-highlight-color: transparent; }
+  .bucket:active { transform: scale(.94); }
+  .bucket .tin { height: 76px; border-radius: 10px 10px 16px 16px; background: linear-gradient(90deg, #cfd2d6, #f4f5f6 40%, #babfc4); position: relative; box-shadow: 0 6px 12px #0003; }
+  .bucket .top { position: absolute; left: 0; right: 0; top: -14px; height: 30px; border-radius: 50%; background: #e9ebee; display: flex; align-items: center; justify-content: center; }
+  .bucket .top i { width: 88%; height: 76%; border-radius: 50%; display: block; box-shadow: inset 0 3px 6px #0004; }
+  .bucket .label { position: absolute; left: 18%; right: 18%; top: 28px; height: 28px; border-radius: 4px; border: 3px solid #fff8; }
+  .bucket .name { text-align: center; font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .bucket .cnt { position: absolute; top: -22px; right: -4px; min-width: 24px; height: 24px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 800; display: none; align-items: center; justify-content: center; padding: 0 6px; z-index: 2; }
+  .bucket .cnt.on { display: flex; }
+  .tools { display: flex; gap: 8px; margin-top: 12px; width: 100%; justify-content: center; }
+  button { font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 14px; padding: 11px 16px; background: #fff; color: var(--ink); box-shadow: 0 3px 0 #0002; cursor: pointer; }
+  button.primary { background: linear-gradient(180deg, #ff8a5c, #ff5a2a); color: #fff; flex: 1; max-width: 200px; }
+  button:disabled { opacity: .45; }
+  button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #0002; }
+  .brush { position: fixed; width: 22px; height: 90px; pointer-events: none; z-index: 20; display: none; }
+  .brush .h { position: absolute; left: 8px; top: 0; width: 7px; height: 52px; border-radius: 4px; background: #8a6cff; }
+  .brush .f { position: absolute; left: 4px; top: 48px; width: 15px; height: 12px; background: #c9ccd2; }
+  .brush .b { position: absolute; left: 2px; top: 58px; width: 19px; height: 30px; border-radius: 3px 3px 9px 9px; }
+  .overlay { position: fixed; inset: 0; background: #2a201a99; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
+  .overlay.show { display: flex; }
+  .card { background: var(--panel); border-radius: 22px; padding: 20px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 16px 40px #0005; max-height: 90vh; overflow: auto; }
+  .card h2 { margin: 0 0 6px; }
+  .card p { color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
+  .pct { font-size: 52px; font-weight: 900; margin: 4px 0; }
+  .stars { font-size: 30px; color: #ffb400; letter-spacing: 6px; min-height: 36px; }
+  .swatches { display: flex; gap: 12px; justify-content: center; margin: 8px 0 14px; }
+  .swatches div { width: 96px; }
+  .swatches span { display: block; height: 64px; border-radius: 12px; box-shadow: inset 0 0 0 2px #0001; }
+  .swatches small { color: var(--muted); }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  #levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
+  #levels button { padding: 8px 0; line-height: 1.2; font-size: 14px; }
+  #levels button.done { background: #ffe3c4; }
+  #levels button.cur { outline: 2px solid var(--accent); }
+  #levels small { display: block; font-size: 10px; min-height: 12px; color: #c98a00; }
+  .help { text-align: left; color: var(--muted); font-size: 14px; padding-left: 18px; }
+  .help li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a href="../evony/">王者之路</a><a class="on" href="./">色彩配對</a></nav>
+<header>
+  <h1>色彩配對　<span id="lvlName"></span></h1>
+  <div class="row"><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
+</header>
+<div class="game">
+  <canvas id="target"></canvas>
+  <div class="easel"><canvas id="paint"></canvas><div class="ledge"></div></div>
+  <div class="info">已用 <b id="drops">0</b> / 15 滴</div>
+  <div class="buckets" id="buckets"></div>
+  <div class="tools">
+    <button id="btnUndo">復原</button>
+    <button id="btnClear">清空</button>
+    <button class="primary" id="btnDone">完成</button>
+  </div>
+</div>
+<div class="brush" id="brush"><div class="h"></div><div class="f"></div><div class="b" id="brushTip"></div></div>
+<div class="overlay" id="box"><div class="card" id="boxCard"></div></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('color.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('color.' + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  const MAX_DROPS = 15, PASS = 90;
+
+  const PAINTS = {
+    red: ['紅', [215, 30, 40]], yellow: ['黃', [255, 214, 22]], blue: ['藍', [32, 72, 205]], white: ['白', [250, 250, 248]],
+    black: ['黑', [24, 24, 26]], pink: ['桃紅', [232, 52, 168]], green: ['綠', [36, 168, 74]], orange: ['橘', [255, 128, 10]], brown: ['棕', [120, 70, 32]],
+  };
+
+  // Paint mixing: a weighted geometric mean per channel, a cheap stand-in for
+  // subtractive mixing (blue + yellow comes out green, black darkens fast).
+  function mix(drops) {
+    const total = Object.values(drops).reduce((a, b) => a + b, 0);
+    if (!total) return null;
+    const out = [0, 0, 0];
+    for (const [k, n] of Object.entries(drops)) {
+      if (!n) continue;
+      PAINTS[k][1].forEach((c, i) => (out[i] += (n / total) * Math.log(Math.max(c, 4))));
+    }
+    return out.map(v => Math.round(Math.exp(v)));
+  }
+  function lab([r, g, b]) {
+    const f = c => { c /= 255; return c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92; };
+    const R = f(r), G = f(g), B = f(b);
+    let x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, y = R * 0.2126 + G * 0.7152 + B * 0.0722, z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+    const t = v => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+    x = t(x); y = t(y); z = t(z);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  }
+  // Similarity from the CIE76 colour difference.
+  function similarity(a, b) {
+    if (!a) return 0;
+    const [l1, a1, b1] = lab(a), [l2, a2, b2] = lab(b);
+    const dE = Math.hypot(l1 - l2, a1 - a2, b1 - b2);
+    return Math.max(0, Math.round(100 - dE * 1.5));
+  }
+  const css = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+  const shade = (c, k) => css(c.map(v => Math.max(0, Math.min(255, Math.round(v * k)))));
+
+  // Hand-made levels: object, paints on offer, and the hidden recipe.
+  const LEVELS = [
+    ['apple', '蘋果', ['red', 'yellow', 'white'], { red: 3, yellow: 1 }],
+    ['lemon', '檸檬', ['yellow', 'white', 'green'], { yellow: 3, white: 1 }],
+    ['orange', '橘子', ['red', 'yellow', 'blue'], { red: 1, yellow: 2 }],
+    ['eggplant', '茄子', ['pink', 'blue', 'black'], { pink: 2, blue: 2, black: 1 }],
+    ['pepper', '青椒', ['yellow', 'blue', 'black'], { yellow: 3, blue: 2 }],
+    ['strawberry', '草莓', ['red', 'pink', 'white'], { red: 3, pink: 1 }],
+    ['grape', '葡萄', ['red', 'blue', 'white'], { red: 1, blue: 2, white: 1 }],
+    ['banana', '香蕉', ['yellow', 'white', 'brown'], { yellow: 4, white: 1 }],
+    ['carrot', '胡蘿蔔', ['red', 'yellow', 'white'], { red: 2, yellow: 3 }],
+    ['chocolate', '巧克力', ['brown', 'black', 'red'], { brown: 3, black: 1 }],
+    ['blossom', '櫻花', ['pink', 'white', 'red'], { pink: 1, white: 3 }],
+    ['leaf', '抹茶', ['green', 'yellow', 'white'], { green: 2, yellow: 1, white: 1 }],
+    ['pumpkin', '南瓜', ['orange', 'brown', 'yellow'], { orange: 3, brown: 1 }],
+    ['watermelon', '西瓜', ['red', 'pink', 'white'], { red: 2, pink: 1, white: 1 }],
+    ['blueberry', '藍莓', ['blue', 'black', 'pink'], { blue: 3, black: 1, pink: 1 }],
+    ['apple', '青蘋果', ['green', 'yellow', 'white'], { green: 2, yellow: 2, white: 1 }],
+    ['grape', '紫葡萄', ['pink', 'blue', 'black', 'white'], { pink: 2, blue: 3, black: 1 }],
+    ['pepper', '紅甜椒', ['red', 'orange', 'brown', 'white'], { red: 3, orange: 1, brown: 1 }],
+    ['eggplant', '淺茄子', ['pink', 'blue', 'white', 'black'], { pink: 2, blue: 2, white: 2, black: 1 }],
+    ['chocolate', '牛奶巧克力', ['brown', 'white', 'orange', 'black'], { brown: 3, white: 2, orange: 1 }],
+  ];
+  const SHAPES = ['apple', 'lemon', 'orange', 'eggplant', 'pepper', 'strawberry', 'grape', 'banana', 'carrot', 'chocolate', 'blossom', 'leaf', 'pumpkin', 'watermelon', 'blueberry'];
+  const MYSTERY = ['神秘果', '奇幻莓', '彩虹豆', '魔法瓜', '夢幻椒', '星光梨'];
+
+  // After the hand-made levels, levels are generated forever from a seed.
+  function rng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s + 0x6d2b79f5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function levelAt(i) {
+    if (i < LEVELS.length) {
+      const [shape, name, paints, recipe] = LEVELS[i];
+      return { shape, name, paints, recipe };
+    }
+    const r = rng(777 + i * 131);
+    const keys = Object.keys(PAINTS).sort(() => r() - 0.5);
+    const paints = keys.slice(0, 3 + (r() < 0.5 ? 1 : 0));
+    const recipe = {};
+    const used = 2 + Math.floor(r() * (paints.length - 1));
+    paints.slice(0, used).forEach(k => (recipe[k] = 1 + Math.floor(r() * 3)));
+    return { shape: SHAPES[Math.floor(r() * SHAPES.length)], name: MYSTERY[Math.floor(r() * MYSTERY.length)] + ' ' + (i + 1), paints: paints.sort(() => r() - 0.5), recipe };
+  }
+
+  let progress = store.get('progress', { level: 0, stars: {} });
+  let L, target, drops, history;
+
+  // ---- Target character drawing ----
+  const tc = $('target'), tx = tc.getContext('2d');
+  function fitCanvas(cv, ctx) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return [r.width, r.height];
+  }
+  function face(ctx, x, y, s) {
+    for (const dx of [-1, 1]) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(x + dx * s * 0.32, y, s * 0.2, s * 0.24, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#3a2416';
+      ctx.beginPath(); ctx.arc(x + dx * s * 0.3, y + s * 0.04, s * 0.1, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#5a3416'; ctx.lineWidth = Math.max(2, s * 0.05);
+      ctx.beginPath(); ctx.moveTo(x + dx * s * 0.48, y - s * 0.32); ctx.lineTo(x + dx * s * 0.16, y - s * 0.38); ctx.stroke();
+    }
+    ctx.strokeStyle = '#3a2416'; ctx.lineWidth = Math.max(2, s * 0.05);
+    ctx.beginPath(); ctx.arc(x, y + s * 0.42, s * 0.16, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  }
+  function leafAt(ctx, x, y, s, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = '#8bc34a';
+    ctx.beginPath(); ctx.ellipse(0, -s * 0.5, s * 0.22, s * 0.5, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  function drawTarget() {
+    const [w, h] = fitCanvas(tc, tx);
+    tx.clearRect(0, 0, w, h);
+    const c = target, base = css(c), dark = shade(c, 0.72), light = shade(c, 1.35);
+    const cx = w / 2, cy = h / 2 + 6, S = Math.min(w * 0.36, h * 0.42);
+    const gloss = (x, y, rx, ry, rot = 0) => { tx.fillStyle = '#ffffff55'; tx.beginPath(); tx.ellipse(x, y, rx, ry, rot, 0, 7); tx.fill(); };
+    tx.fillStyle = '#0000001a';
+    tx.beginPath(); tx.ellipse(cx, cy + S * 0.95, S * 1.1, S * 0.14, 0, 0, 7); tx.fill();
+    tx.fillStyle = base;
+    switch (L.shape) {
+      case 'eggplant':
+        tx.save(); tx.translate(cx, cy); tx.rotate(-0.12);
+        tx.beginPath(); tx.ellipse(-S * 0.35, S * 0.15, S * 0.75, S * 0.6, 0.15, 0, 7); tx.fill();
+        tx.beginPath(); tx.ellipse(S * 0.45, -S * 0.15, S * 0.55, S * 0.42, -0.3, 0, 7); tx.fill();
+        gloss(-S * 0.45, -S * 0.12, S * 0.4, S * 0.1, -0.1);
+        tx.fillStyle = '#9ccc65';
+        tx.beginPath(); tx.moveTo(S * 0.7, -S * 0.55); tx.lineTo(S * 1.15, -S * 0.2); tx.lineTo(S * 0.85, 0); tx.lineTo(S * 0.55, -S * 0.1); tx.fill();
+        tx.restore();
+        face(tx, cx + S * 0.3, cy - S * 0.15, S * 0.45);
+        return;
+      case 'banana':
+        tx.lineCap = 'round'; tx.strokeStyle = base; tx.lineWidth = S * 0.55;
+        tx.beginPath(); tx.arc(cx, cy - S * 0.9, S * 1.25, 0.25 * Math.PI, 0.75 * Math.PI); tx.stroke();
+        tx.fillStyle = '#6d4c2f'; tx.beginPath(); tx.arc(cx - S * 0.9, cy - S * 0.05, S * 0.09, 0, 7); tx.fill();
+        face(tx, cx, cy + S * 0.3, S * 0.4);
+        return;
+      case 'carrot':
+        tx.beginPath(); tx.moveTo(cx - S * 0.45, cy - S * 0.6); tx.quadraticCurveTo(cx, cy - S * 0.8, cx + S * 0.45, cy - S * 0.6); tx.lineTo(cx, cy + S * 0.95); tx.closePath(); tx.fill();
+        for (const r of [-0.4, 0, 0.4]) leafAt(tx, cx, cy - S * 0.7, S * 0.7, r);
+        face(tx, cx, cy - S * 0.25, S * 0.4);
+        return;
+      case 'chocolate':
+        tx.fillStyle = dark; tx.beginPath(); tx.roundRect(cx - S * 0.8, cy - S * 0.75, S * 1.6, S * 1.5, S * 0.12); tx.fill();
+        tx.fillStyle = base;
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) { tx.beginPath(); tx.roundRect(cx - S * 0.72 + i * S * 0.74, cy - S * 0.67 + j * S * 0.47, S * 0.68, S * 0.4, S * 0.06); tx.fill(); }
+        face(tx, cx, cy - S * 0.05, S * 0.45);
+        return;
+      case 'blossom':
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          tx.beginPath(); tx.ellipse(cx + Math.cos(a) * S * 0.48, cy + Math.sin(a) * S * 0.48, S * 0.42, S * 0.32, a, 0, 7); tx.fill();
+        }
+        tx.fillStyle = light; tx.beginPath(); tx.arc(cx, cy, S * 0.38, 0, 7); tx.fill();
+        face(tx, cx, cy, S * 0.32);
+        return;
+      case 'leaf':
+        tx.beginPath(); tx.moveTo(cx - S, cy + S * 0.3); tx.quadraticCurveTo(cx - S * 0.2, cy - S * 1.1, cx + S, cy - S * 0.4); tx.quadraticCurveTo(cx + S * 0.2, cy + S * 0.9, cx - S, cy + S * 0.3); tx.fill();
+        tx.strokeStyle = dark; tx.lineWidth = 3; tx.beginPath(); tx.moveTo(cx - S, cy + S * 0.3); tx.quadraticCurveTo(cx, cy - S * 0.1, cx + S, cy - S * 0.4); tx.stroke();
+        face(tx, cx - S * 0.05, cy + S * 0.05, S * 0.36);
+        return;
+      case 'grape': case 'blueberry': {
+        const pts = L.shape === 'grape' ? [[0, -0.55], [-0.4, -0.45], [0.4, -0.45], [-0.6, -0.05], [-0.2, -0.05], [0.2, -0.05], [0.6, -0.05], [-0.4, 0.35], [0, 0.35], [0.4, 0.35], [-0.2, 0.72], [0.2, 0.72]]
+          : [[-0.45, 0.05], [0.45, 0.05], [0, -0.3]];
+        const rr = L.shape === 'grape' ? 0.26 : 0.48;
+        for (const [px, py] of pts) {
+          tx.fillStyle = base; tx.beginPath(); tx.arc(cx + px * S, cy + py * S, S * rr, 0, 7); tx.fill();
+          tx.strokeStyle = dark; tx.lineWidth = 2; tx.stroke();
+          gloss(cx + (px - rr * 0.35) * S, cy + (py - rr * 0.4) * S, S * rr * 0.3, S * rr * 0.18, -0.6);
+        }
+        if (L.shape === 'grape') leafAt(tx, cx + S * 0.15, cy - S * 0.8, S * 0.55, 0.9);
+        face(tx, cx, cy - S * 0.05, S * 0.36);
+        return;
+      }
+      case 'watermelon':
+        tx.fillStyle = '#2e7d32'; tx.beginPath(); tx.arc(cx, cy - S * 0.25, S * 1.05, 0, Math.PI); tx.fill();
+        tx.fillStyle = '#e8f5d0'; tx.beginPath(); tx.arc(cx, cy - S * 0.25, S * 0.94, 0, Math.PI); tx.fill();
+        tx.fillStyle = base; tx.beginPath(); tx.arc(cx, cy - S * 0.25, S * 0.85, 0, Math.PI); tx.fill();
+        tx.fillStyle = '#2a1a12';
+        for (const [px, py] of [[-0.5, 0.1], [-0.15, 0.3], [0.2, 0.1], [0.5, 0.25], [0, 0.55]]) { tx.beginPath(); tx.ellipse(cx + px * S, cy + py * S - S * 0.05, S * 0.04, S * 0.07, 0, 0, 7); tx.fill(); }
+        face(tx, cx, cy - S * 0.02, S * 0.34);
+        return;
+      default: {
+        // Round fruit: apple, lemon, orange, strawberry, pepper, pumpkin
+        tx.beginPath();
+        if (L.shape === 'lemon') tx.ellipse(cx, cy, S * 0.95, S * 0.7, 0, 0, 7);
+        else if (L.shape === 'strawberry') { tx.moveTo(cx, cy + S * 0.95); tx.bezierCurveTo(cx - S * 1.1, cy + S * 0.1, cx - S * 0.9, cy - S * 0.8, cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 0.9, cy - S * 0.8, cx + S * 1.1, cy + S * 0.1, cx, cy + S * 0.95); }
+        else if (L.shape === 'pumpkin') { tx.ellipse(cx - S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx + S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx, cy, S * 0.55, S * 0.8, 0, 0, 7); }
+        else if (L.shape === 'pepper') { tx.moveTo(cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 1.0, cy - S * 0.8, cx + S * 0.9, cy + S * 0.9, cx + S * 0.2, cy + S * 0.85); tx.quadraticCurveTo(cx, cy + S * 0.7, cx - S * 0.2, cy + S * 0.85); tx.bezierCurveTo(cx - S * 0.9, cy + S * 0.9, cx - S * 1.0, cy - S * 0.8, cx, cy - S * 0.6); }
+        else { tx.arc(cx - S * 0.3, cy, S * 0.72, 0, 7); tx.arc(cx + S * 0.3, cy, S * 0.72, 0, 7); }
+        tx.fill();
+        if (L.shape === 'pumpkin') { tx.strokeStyle = dark; tx.lineWidth = 3; for (const k of [-0.25, 0.25]) { tx.beginPath(); tx.ellipse(cx + k * S, cy, S * 0.25, S * 0.78, 0, 0, 7); tx.stroke(); } }
+        if (L.shape === 'strawberry') { tx.fillStyle = '#fff3b0'; for (let i = 0; i < 14; i++) { const a = i * 2.4, d = (i % 4) * 0.18 + 0.15; tx.beginPath(); tx.ellipse(cx + Math.cos(a) * d * S, cy + S * 0.1 + Math.sin(a) * d * S * 0.9, 3, 4.5, 0, 0, 7); tx.fill(); } }
+        gloss(cx - S * 0.45, cy - S * 0.35, S * 0.22, S * 0.12, -0.5);
+        tx.fillStyle = '#6d4c2f'; tx.fillRect(cx - 3, cy - S * 0.95, 6, S * 0.3);
+        if (L.shape !== 'lemon') leafAt(tx, cx + S * 0.08, cy - S * 0.7, S * 0.5, 1.0);
+        face(tx, cx, cy + S * 0.05, S * 0.42);
+      }
+    }
+  }
+
+  // ---- Canvas painting ----
+  const pc = $('paint'), px = pc.getContext('2d');
+  let strokes = [];
+  function addStroke() {
+    const r = Math.random;
+    strokes.push({ x: 0.15 + r() * 0.7, y: 0.15 + r() * 0.7, rx: 0.28 + r() * 0.2, ry: 0.22 + r() * 0.18, rot: r() * 3, seed: (r() * 1e6) | 0 });
+  }
+  function drawPaint() {
+    const [w, h] = fitCanvas(pc, px);
+    px.fillStyle = '#1d1b1a';
+    px.fillRect(0, 0, w, h);
+    const c = mix(drops);
+    if (!c) {
+      px.fillStyle = '#ffffff55'; px.font = '700 15px system-ui, sans-serif'; px.textAlign = 'center';
+      px.fillText('點下方顏料開始調色', w / 2, h / 2);
+      return;
+    }
+    // Every stroke shows the current mix, as if the paint were stirred.
+    for (const s of strokes) {
+      const rr = rng(s.seed);
+      px.fillStyle = css(c);
+      px.beginPath();
+      const n = 14;
+      for (let i = 0; i <= n; i++) {
+        const a = (i / n) * Math.PI * 2, k = 0.82 + rr() * 0.3;
+        const x = (s.x + Math.cos(a + s.rot) * s.rx * k) * w, y = (s.y + Math.sin(a + s.rot) * s.ry * k) * h;
+        i ? px.lineTo(x, y) : px.moveTo(x, y);
+      }
+      px.closePath();
+      px.fill();
+    }
+    // Brush texture
+    const rr = rng(9);
+    for (let i = 0; i < 160; i++) {
+      const x = rr() * w, y = rr() * h, len = 10 + rr() * 30;
+      px.strokeStyle = rr() < 0.5 ? '#ffffff14' : '#00000018';
+      px.lineWidth = 1 + rr() * 2;
+      px.beginPath(); px.moveTo(x, y); px.quadraticCurveTo(x + len / 2, y + (rr() - 0.5) * 8, x + len, y + (rr() - 0.5) * 6); px.stroke();
+    }
+  }
+
+  // ---- Buckets ----
+  function renderBuckets() {
+    $('buckets').innerHTML = L.paints.map(k => `<div class="bucket" data-k="${k}">
+      <div class="cnt ${drops[k] ? 'on' : ''}">${drops[k] || ''}</div>
+      <div class="tin"><div class="top"><i style="background:${css(PAINTS[k][1])}"></i></div><div class="label" style="background:${css(PAINTS[k][1])}"></div></div>
+      <div class="name">${PAINTS[k][0]}</div></div>`).join('');
+    document.querySelectorAll('.bucket').forEach(b => (b.onclick = () => addDrop(b.dataset.k, b)));
+  }
+  function total() { return Object.values(drops).reduce((a, b) => a + b, 0); }
+  function sync() {
+    $('drops').textContent = total();
+    $('btnUndo').disabled = !history.length;
+    $('btnClear').disabled = !history.length;
+    $('btnDone').disabled = !total();
+    document.querySelectorAll('.bucket').forEach(b => {
+      const n = drops[b.dataset.k] || 0, el = b.querySelector('.cnt');
+      el.textContent = n; el.classList.toggle('on', n > 0);
+    });
+    drawPaint();
+  }
+  function addDrop(k, el) {
+    if (total() >= MAX_DROPS) { flashInfo('最多 15 滴，先復原幾滴吧'); return; }
+    history.push(k);
+    drops[k] = (drops[k] || 0) + 1;
+    if (strokes.length < 4 + total()) addStroke();
+    animateBrush(el, k);
+    sync();
+  }
+  function flashInfo(t) {
+    const info = document.querySelector('.info');
+    const old = info.innerHTML;
+    info.textContent = t;
+    setTimeout(() => (info.innerHTML = old), 1200);
+  }
+  function animateBrush(el, k) {
+    const br = $('brush'), a = el.getBoundingClientRect(), p = pc.getBoundingClientRect();
+    $('brushTip').style.background = css(PAINTS[k][1]);
+    br.style.display = 'block';
+    br.animate([
+      { transform: `translate(${a.left + a.width / 2 - 11}px, ${a.top - 70}px) rotate(0deg)` },
+      { transform: `translate(${p.left + p.width * (0.3 + Math.random() * 0.4)}px, ${p.top + p.height * 0.4}px) rotate(-25deg)`, offset: 0.55 },
+      { transform: `translate(${p.left + p.width * (0.3 + Math.random() * 0.4)}px, ${p.top + p.height * 0.55}px) rotate(20deg)` },
+    ], { duration: 420, easing: 'ease-out' }).onfinish = () => (br.style.display = 'none');
+  }
+
+  function load(i) {
+    progress.level = i;
+    store.set('progress', progress);
+    L = levelAt(i);
+    target = mix(L.recipe);
+    drops = {};
+    history = [];
+    strokes = [];
+    $('lvlName').textContent = `第 ${i + 1} 關・${L.name}`;
+    renderBuckets();
+    drawTarget();
+    sync();
+    $('box').classList.remove('show');
+  }
+
+  function finish() {
+    const c = mix(drops);
+    const pct = similarity(c, target);
+    const stars = pct >= 99 ? 3 : pct >= 95 ? 2 : pct >= PASS ? 1 : 0;
+    if (stars) {
+      progress.stars[progress.level] = Math.max(progress.stars[progress.level] || 0, stars);
+      store.set('progress', progress);
+    }
+    $('boxCard').innerHTML = `<h2>${stars ? (stars === 3 ? '完美配色！' : '配對成功！') : '還差一點'}</h2>
+      <div class="pct" style="color:${stars ? '#2e9e57' : '#e0574a'}">${pct}%</div>
+      <div class="stars">${stars ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : ''}</div>
+      <div class="swatches"><div><span style="background:${css(target)}"></span><small>目標</small></div><div><span style="background:${css(c)}"></span><small>你的顏色</small></div></div>
+      <p>${stars ? (stars < 3 ? `達到 99% 可拿三星。` : '一模一樣！') : `需要 ${PASS}% 才算過關。${hint(c)}`}</p>
+      <div class="row"><button id="bTune">繼續調整</button>${stars ? '<button class="primary" id="bNext">下一關</button>' : ''}</div>`;
+    $('box').classList.add('show');
+    $('bTune').onclick = () => $('box').classList.remove('show');
+    if (stars) $('bNext').onclick = () => load(progress.level + 1);
+  }
+  // A gentle nudge: lighter/darker, then which hue is off.
+  function hint(c) {
+    const [l1, a1, b1] = lab(c), [l2, a2, b2] = lab(target);
+    if (l1 - l2 > 8) return '你的顏色太亮了。';
+    if (l2 - l1 > 8) return '你的顏色太暗了。';
+    if (a1 - a2 > 8) return '偏紅了一點。';
+    if (a2 - a1 > 8) return '偏綠了一點。';
+    if (b1 - b2 > 8) return '偏黃了一點。';
+    if (b2 - b1 > 8) return '偏藍了一點。';
+    return '很接近了，再微調看看。';
+  }
+
+  function showLevels() {
+    const n = Math.max(LEVELS.length, progress.level + 6);
+    $('boxCard').innerHTML = `<h2>選擇關卡</h2><p>前 ${LEVELS.length} 關是精選關卡，之後是無限的挑戰關卡。</p><div id="levels">${Array.from({ length: n }, (_, i) => {
+      const s = progress.stars[i] || 0;
+      return `<button data-l="${i}" class="${s ? 'done' : ''} ${i === progress.level ? 'cur' : ''}">${i + 1}<small>${'★'.repeat(s)}</small></button>`;
+    }).join('')}</div><button id="bClose">關閉</button>`;
+    $('box').classList.add('show');
+    document.querySelectorAll('[data-l]').forEach(b => (b.onclick = () => load(+b.dataset.l)));
+    $('bClose').onclick = () => $('box').classList.remove('show');
+  }
+  function showHelp() {
+    $('boxCard').innerHTML = `<h2>色彩配對</h2><ul class="help">
+      <li>上方的角色就是目標顏色。點下方的顏料桶，每點一下加一滴顏料到畫布上。</li>
+      <li>顏料會像真的一樣混色：藍加黃變綠，加黑會變暗，加白會變淺。</li>
+      <li>調好後按「完成」，相似度 90% 以上過關，99% 拿三星。沒過關可以繼續調整。</li>
+      <li>最多 15 滴，可以復原或清空重來。</li>
+    </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
+    $('box').classList.add('show');
+    $('bGo').onclick = () => { $('box').classList.remove('show'); store.set('seen', true); };
+  }
+
+  $('btnUndo').onclick = () => { const k = history.pop(); if (k) { drops[k]--; if (!drops[k]) delete drops[k]; } sync(); };
+  $('btnClear').onclick = () => { drops = {}; history = []; strokes = []; sync(); };
+  $('btnDone').onclick = finish;
+  $('btnLevels').onclick = showLevels;
+  $('btnHelp').onclick = showHelp;
+  window.addEventListener('resize', () => { drawTarget(); drawPaint(); });
+  window.__color = { mix, similarity, levelAt, state: () => ({ drops, target, L }) };
+
+  load(progress.level || 0);
+  if (!store.get('seen', false)) showHelp();
+})();
+</script>
+</body>
+</html>
