@@ -24,7 +24,7 @@ the board and slide each one out through the gate of the same color.
 | site/sultan/index.html | Sultan's Game: weekly orders, rites, side stories and multiple endings |
 | site/bounce/index.html | Count and Bounce: pour balls through multiplier gates into a cup |
 | site/evony/index.html | 王者之路: endless Evony-ad style two-lane bridge runner with +1 steps, gates, hordes and a giant every few segments |
-| site/color/index.html | 色彩配對: mix paint drops to match a target character's colour; 20 handmade levels then endless generated ones |
+| site/color/index.html | 色彩配對: dip a brush in paint tins and brush it onto a palette to match a target character's colour; 20 handmade levels then endless generated ones |
 | site/lord/index.html | 最強領主: swipe an army through gates and traps, storm the castle, upgrade heroes, griffin and town |
 | site/bounce/engine.js | Count and Bounce physics, shared by the page and the level generator |
 | site/bounce/levels.js | Generated Count and Bounce levels (30 levels) |

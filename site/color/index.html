@@ -21,16 +21,17 @@
   h1 { margin: 0; font-size: 19px; font-weight: 900; }
   .game { flex: 1; width: 100%; max-width: 480px; display: flex; flex-direction: column; align-items: center; min-height: 0; padding: 0 12px 10px; }
   #target { width: 100%; flex: 1.05; min-height: 0; }
-  .easel { position: relative; width: min(78%, 330px); aspect-ratio: 1.15; flex: 0 0 auto; }
-  .easel::before, .easel::after { content: ""; position: absolute; width: 10px; background: var(--wood); top: -18px; bottom: -16px; border-radius: 4px; z-index: 0; }
-  .easel::before { left: 18%; transform: rotate(4deg); } .easel::after { right: 18%; transform: rotate(-4deg); }
-  #paint { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 6px; box-shadow: 0 10px 24px #0004; background: #1d1b1a; }
-  .ledge { position: absolute; left: -4%; right: -4%; bottom: -14px; height: 14px; background: #b77b46; border-radius: 4px; z-index: 2; box-shadow: 0 4px 8px #0003; }
-  .info { margin: 22px 0 28px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+  .palette { position: relative; width: min(86%, 360px); aspect-ratio: 1.45; flex: 0 0 auto; touch-action: none; }
+  #paint { width: 100%; height: 100%; display: block; }
+  .mixbar { width: min(80%, 330px); height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: #0001; margin-top: 6px; }
+  .mixbar i { display: block; height: 100%; transition: width .15s; }
+  .info { margin: 8px 0 24px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
   .info b { color: var(--ink); }
   .buckets { display: flex; gap: 10px; justify-content: center; width: 100%; }
-  .bucket { position: relative; flex: 1; max-width: 108px; cursor: pointer; transition: transform .1s; -webkit-tap-highlight-color: transparent; }
-  .bucket:active { transform: scale(.94); }
+  .bucket { position: relative; flex: 1; max-width: 96px; transition: transform .1s; -webkit-tap-highlight-color: transparent; }
+  .bucket.dip { transform: translateY(3px) scale(.97); }
+  .bucket.water .top i { background: radial-gradient(circle at 40% 35%, #e6f6ff, #9fd3ef); }
+  .bucket.water .tin { background: linear-gradient(90deg, #cfe9f7aa, #f2fbffcc 40%, #b7dbefaa); }
   .bucket .tin { height: 76px; border-radius: 10px 10px 16px 16px; background: linear-gradient(90deg, #cfd2d6, #f4f5f6 40%, #babfc4); position: relative; box-shadow: 0 6px 12px #0003; }
   .bucket .top { position: absolute; left: 0; right: 0; top: -14px; height: 30px; border-radius: 50%; background: #e9ebee; display: flex; align-items: center; justify-content: center; }
   .bucket .top i { width: 88%; height: 76%; border-radius: 50%; display: block; box-shadow: inset 0 3px 6px #0004; }
@@ -43,10 +44,12 @@
   button.primary { background: linear-gradient(180deg, #ff8a5c, #ff5a2a); color: #fff; flex: 1; max-width: 200px; }
   button:disabled { opacity: .45; }
   button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #0002; }
-  .brush { position: fixed; width: 22px; height: 90px; pointer-events: none; z-index: 20; display: none; }
-  .brush .h { position: absolute; left: 8px; top: 0; width: 7px; height: 52px; border-radius: 4px; background: #8a6cff; }
-  .brush .f { position: absolute; left: 4px; top: 48px; width: 15px; height: 12px; background: #c9ccd2; }
-  .brush .b { position: absolute; left: 2px; top: 58px; width: 19px; height: 30px; border-radius: 3px 3px 9px 9px; }
+  body { touch-action: none; }
+  .brush { position: fixed; left: 0; top: 0; width: 26px; height: 120px; pointer-events: none; z-index: 20; transform-origin: 13px 118px; filter: drop-shadow(2px 6px 4px #0004); }
+  .brush .h { position: absolute; left: 9px; top: 0; width: 8px; height: 70px; border-radius: 4px; background: linear-gradient(90deg, #7a5cff, #b3a2ff 50%, #6a4ae8); }
+  .brush .f { position: absolute; left: 5px; top: 66px; width: 16px; height: 16px; background: linear-gradient(90deg, #b8bcc4, #eef0f3 50%, #a9aeb6); border-radius: 2px; }
+  .brush .b { position: absolute; left: 3px; top: 80px; width: 20px; height: 40px; border-radius: 4px 4px 10px 10px / 4px 4px 22px 22px; background: #d9c9a8; }
+  .brush .p { position: absolute; left: 3px; bottom: 0; width: 20px; border-radius: 4px 4px 10px 10px / 4px 4px 22px 22px; transition: height .1s; }
   .overlay { position: fixed; inset: 0; background: #2a201a99; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
   .overlay.show { display: flex; }
   .card { background: var(--panel); border-radius: 22px; padding: 20px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 16px 40px #0005; max-height: 90vh; overflow: auto; }
@@ -76,16 +79,16 @@
 </header>
 <div class="game">
   <canvas id="target"></canvas>
-  <div class="easel"><canvas id="paint"></canvas><div class="ledge"></div></div>
-  <div class="info">已用 <b id="drops">0</b> / 15 滴</div>
+  <div class="palette" id="palette"><canvas id="paint"></canvas></div>
+  <div class="mixbar" id="mixbar"></div>
+  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份</div>
   <div class="buckets" id="buckets"></div>
   <div class="tools">
-    <button id="btnUndo">復原</button>
-    <button id="btnClear">清空</button>
+    <button id="btnClear">清洗調色盤</button>
     <button class="primary" id="btnDone">完成</button>
   </div>
 </div>
-<div class="brush" id="brush"><div class="h"></div><div class="f"></div><div class="b" id="brushTip"></div></div>
+<div class="brush" id="brush"><div class="h"></div><div class="f"></div><div class="b"></div><div class="p" id="brushPaint"></div></div>
 <div class="overlay" id="box"><div class="card" id="boxCard"></div></div>
 
 <script>
@@ -95,7 +98,7 @@
     get(k, d) { try { const v = localStorage.getItem('color.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('color.' + k, JSON.stringify(v)); } catch (e) {} },
   };
-  const MAX_DROPS = 15, PASS = 90;
+  const PASS = 90;
 
   const PAINTS = {
     red: ['紅', [215, 30, 40]], yellow: ['黃', [255, 214, 22]], blue: ['藍', [32, 72, 205]], white: ['白', [250, 250, 248]],
@@ -302,90 +305,181 @@
     }
   }
 
-  // ---- Canvas painting ----
+  // ---- Brush and palette ----
+  // Hold anywhere to pick up the brush and drag it. Resting it in a paint tin
+  // loads it (the longer, the more, up to a full brush); the water cup washes
+  // it. Brushing across the palette well lays paint down: the further you
+  // brush, the more comes off. The well mixes everything by amount, and the
+  // more you stir, the more evenly the colours blend on screen.
   const pc = $('paint'), px = pc.getContext('2d');
-  let strokes = [];
-  function addStroke() {
-    const r = Math.random;
-    strokes.push({ x: 0.15 + r() * 0.7, y: 0.15 + r() * 0.7, rx: 0.28 + r() * 0.2, ry: 0.22 + r() * 0.18, rot: r() * 3, seed: (r() * 1e6) | 0 });
+  const LOAD_RATE = 1.4;     // brush loads per second while resting in a tin
+  const DEPOSIT = 1 / 240;   // loads put down per pixel brushed in the well
+  const WELL_CAP = 12;
+  let well = {}, brush = {}, layer, lctx, held = false, tip = null, lastPt = null, overKey = null, rects = [], tilt = 0;
+  const amount = m => Object.values(m).reduce((a, b) => a + b, 0);
+
+  function wellGeom() {
+    const r = pc.getBoundingClientRect();
+    return { w: r.width, h: r.height, cx: r.width / 2, cy: r.height / 2, rx: r.width * 0.36, ry: r.height * 0.36 };
   }
+  function resetLayer() {
+    const g = wellGeom(), dpr = window.devicePixelRatio || 1;
+    layer = document.createElement('canvas');
+    layer.width = Math.round(g.w * dpr); layer.height = Math.round(g.h * dpr);
+    lctx = layer.getContext('2d');
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function clipWell(ctx, g) { ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); ctx.clip(); }
+
   function drawPaint() {
     const [w, h] = fitCanvas(pc, px);
-    px.fillStyle = '#1d1b1a';
-    px.fillRect(0, 0, w, h);
-    const c = mix(drops);
-    if (!c) {
-      px.fillStyle = '#ffffff55'; px.font = '700 15px system-ui, sans-serif'; px.textAlign = 'center';
-      px.fillText('點下方顏料開始調色', w / 2, h / 2);
-      return;
-    }
-    // Every stroke shows the current mix, as if the paint were stirred.
-    for (const s of strokes) {
-      const rr = rng(s.seed);
-      px.fillStyle = css(c);
-      px.beginPath();
-      const n = 14;
-      for (let i = 0; i <= n; i++) {
-        const a = (i / n) * Math.PI * 2, k = 0.82 + rr() * 0.3;
-        const x = (s.x + Math.cos(a + s.rot) * s.rx * k) * w, y = (s.y + Math.sin(a + s.rot) * s.ry * k) * h;
-        i ? px.lineTo(x, y) : px.moveTo(x, y);
-      }
-      px.closePath();
-      px.fill();
-    }
-    // Brush texture
-    const rr = rng(9);
-    for (let i = 0; i < 160; i++) {
-      const x = rr() * w, y = rr() * h, len = 10 + rr() * 30;
-      px.strokeStyle = rr() < 0.5 ? '#ffffff14' : '#00000018';
-      px.lineWidth = 1 + rr() * 2;
-      px.beginPath(); px.moveTo(x, y); px.quadraticCurveTo(x + len / 2, y + (rr() - 0.5) * 8, x + len, y + (rr() - 0.5) * 6); px.stroke();
+    const g = wellGeom();
+    px.clearRect(0, 0, w, h);
+    // Ceramic palette with a deep mixing well and little side cups
+    px.fillStyle = '#00000022';
+    px.beginPath(); px.ellipse(g.cx + 4, g.cy + 10, w * 0.48, h * 0.44, 0, 0, 7); px.fill();
+    const dish = px.createLinearGradient(0, 0, 0, h);
+    dish.addColorStop(0, '#ffffff'); dish.addColorStop(1, '#e9e6e1');
+    px.fillStyle = dish;
+    px.beginPath(); px.ellipse(g.cx, g.cy, w * 0.48, h * 0.44, 0, 0, 7); px.fill();
+    const inner = px.createRadialGradient(g.cx, g.cy - g.ry * 0.3, g.rx * 0.2, g.cx, g.cy, g.rx * 1.05);
+    inner.addColorStop(0, '#fbfaf8'); inner.addColorStop(1, '#dcd7d0');
+    px.fillStyle = inner;
+    px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.fill();
+    if (layer) px.drawImage(layer, 0, 0, w, h);
+    px.strokeStyle = '#cfc9c1'; px.lineWidth = 2;
+    px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.stroke();
+    if (!amount(well)) {
+      px.fillStyle = '#8a7c70aa'; px.font = '700 14px system-ui, sans-serif'; px.textAlign = 'center';
+      px.fillText('按住拖曳畫筆：先沾顏料，', g.cx, g.cy - 8);
+      px.fillText('再到這裡來回刷', g.cx, g.cy + 14);
     }
   }
 
-  // ---- Buckets ----
+  function syncUI() {
+    const total = amount(brush), c = mix(brush);
+    $('brushPaint').style.height = Math.round(Math.min(1, total) * 40) + 'px';
+    $('brushPaint').style.background = c ? css(c) : 'transparent';
+    $('loadTxt').textContent = total < 0.02 ? '乾淨' : `${Math.round(total * 100)}%`;
+    $('amountTxt').textContent = amount(well).toFixed(1);
+    const t = amount(well);
+    $('mixbar').innerHTML = t ? Object.entries(well).filter(([, v]) => v > 0.005).map(([k, v]) => `<i style="width:${(v / t) * 100}%;background:${css(PAINTS[k][1])}"></i>`).join('') : '';
+    $('btnDone').disabled = t < 0.3;
+    $('btnClear').disabled = !t;
+  }
+
   function renderBuckets() {
     $('buckets').innerHTML = L.paints.map(k => `<div class="bucket" data-k="${k}">
-      <div class="cnt ${drops[k] ? 'on' : ''}">${drops[k] || ''}</div>
       <div class="tin"><div class="top"><i style="background:${css(PAINTS[k][1])}"></i></div><div class="label" style="background:${css(PAINTS[k][1])}"></div></div>
-      <div class="name">${PAINTS[k][0]}</div></div>`).join('');
-    document.querySelectorAll('.bucket').forEach(b => (b.onclick = () => addDrop(b.dataset.k, b)));
+      <div class="name">${PAINTS[k][0]}</div></div>`).join('') +
+      `<div class="bucket water" data-k="water"><div class="tin"><div class="top"><i></i></div></div><div class="name">洗筆水</div></div>`;
   }
-  function total() { return Object.values(drops).reduce((a, b) => a + b, 0); }
-  function sync() {
-    $('drops').textContent = total();
-    $('btnUndo').disabled = !history.length;
-    $('btnClear').disabled = !history.length;
-    $('btnDone').disabled = !total();
-    document.querySelectorAll('.bucket').forEach(b => {
-      const n = drops[b.dataset.k] || 0, el = b.querySelector('.cnt');
-      el.textContent = n; el.classList.toggle('on', n > 0);
-    });
-    drawPaint();
+
+  // Hit areas are measured when a drag starts (the layout doesn't move mid-drag).
+  function measure() {
+    rects = [...document.querySelectorAll('.bucket')].map(el => ({ k: el.dataset.k, el, r: el.querySelector('.tin').getBoundingClientRect() }));
   }
-  function addDrop(k, el) {
-    if (total() >= MAX_DROPS) { flashInfo('最多 15 滴，先復原幾滴吧'); return; }
-    history.push(k);
-    drops[k] = (drops[k] || 0) + 1;
-    if (strokes.length < 4 + total()) addStroke();
-    animateBrush(el, k);
-    sync();
+  function hit(x, y) {
+    for (const { k, el, r } of rects) if (x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 18 && y <= r.bottom) return { k, el };
+    const pr = pc.getBoundingClientRect(), g = wellGeom();
+    const dx = (x - pr.left - g.cx) / g.rx, dy = (y - pr.top - g.cy) / g.ry;
+    if (dx * dx + dy * dy <= 1) return { k: 'well' };
+    return null;
   }
-  function flashInfo(t) {
-    const info = document.querySelector('.info');
-    const old = info.innerHTML;
-    info.textContent = t;
-    setTimeout(() => (info.innerHTML = old), 1200);
+  function placeBrush(x, y) {
+    $('brush').style.transform = `translate(${x - 13}px, ${y - 118}px) rotate(${tilt}deg)`;
   }
-  function animateBrush(el, k) {
-    const br = $('brush'), a = el.getBoundingClientRect(), p = pc.getBoundingClientRect();
-    $('brushTip').style.background = css(PAINTS[k][1]);
-    br.style.display = 'block';
-    br.animate([
-      { transform: `translate(${a.left + a.width / 2 - 11}px, ${a.top - 70}px) rotate(0deg)` },
-      { transform: `translate(${p.left + p.width * (0.3 + Math.random() * 0.4)}px, ${p.top + p.height * 0.4}px) rotate(-25deg)`, offset: 0.55 },
-      { transform: `translate(${p.left + p.width * (0.3 + Math.random() * 0.4)}px, ${p.top + p.height * 0.55}px) rotate(20deg)` },
-    ], { duration: 420, easing: 'ease-out' }).onfinish = () => (br.style.display = 'none');
+
+  function brushMove(x, y) {
+    if (lastPt) tilt = Math.max(-25, Math.min(25, tilt * 0.8 + (x - lastPt.x) * 0.9));
+    placeBrush(x, y);
+    const h = hit(x, y);
+    overKey = h ? h.k : null;
+    document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
+    if (h && h.el) h.el.classList.add('dip');
+    if (held && h && h.k === 'well' && lastPt) {
+      const pr = pc.getBoundingClientRect();
+      const d = Math.hypot(x - lastPt.x, y - lastPt.y);
+      const g = wellGeom();
+      const load = amount(brush);
+      const room = WELL_CAP - amount(well);
+      const put = Math.min(load, d * DEPOSIT, Math.max(0, room));
+      lctx.save();
+      clipWell(lctx, g);
+      lctx.lineCap = 'round';
+      if (put > 0) {
+        const c = mix(brush);
+        for (const k of Object.keys(brush)) {
+          const part = put * (brush[k] / load);
+          brush[k] -= part;
+          well[k] = (well[k] || 0) + part;
+          if (brush[k] < 1e-4) delete brush[k];
+        }
+        lctx.strokeStyle = css(c);
+        lctx.globalAlpha = 0.9;
+        lctx.lineWidth = 18 + Math.min(1, load) * 10;
+        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left, lastPt.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
+      } else if (room <= 0 && load > 0) flash('調色盤滿了，按「清洗調色盤」重來');
+      // Stirring evens the well out toward the true mix.
+      const m = mix(well);
+      if (m) {
+        lctx.globalAlpha = Math.min(0.5, d * 0.004);
+        lctx.globalCompositeOperation = 'source-atop'; // only tint paint that's already down
+        lctx.fillStyle = css(m);
+        lctx.fillRect(0, 0, g.w, g.h);
+      }
+      lctx.restore();
+      drawPaint();
+    }
+    lastPt = { x, y };
+    syncUI();
+  }
+
+  // Loading and washing happen over time while the brush rests in a tin.
+  let lastT = 0;
+  function tick(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
+    lastT = t;
+    if (held && overKey && overKey !== 'well') {
+      if (overKey === 'water') {
+        for (const k of Object.keys(brush)) { brush[k] *= Math.exp(-4 * dt); if (brush[k] < 0.01) delete brush[k]; }
+      } else {
+        const room = 1 - amount(brush);
+        if (room > 0) brush[overKey] = (brush[overKey] || 0) + Math.min(room, LOAD_RATE * dt);
+      }
+      syncUI();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  let flashTimer;
+  function flash(t) {
+    $('info').dataset.msg = t;
+    $('info').firstChild.textContent = t + '　';
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => ($('info').firstChild.textContent = '筆刷 '), 1500);
+  }
+
+  document.addEventListener('pointerdown', ev => {
+    if (ev.target.closest('button, .overlay, nav, header')) return;
+    held = true;
+    measure();
+    lastPt = null;
+    brushMove(ev.clientX, ev.clientY);
+  });
+  document.addEventListener('pointermove', ev => { if (held) brushMove(ev.clientX, ev.clientY); });
+  const release = () => {
+    held = false;
+    lastPt = null;
+    document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
+  };
+  document.addEventListener('pointerup', release);
+  document.addEventListener('pointercancel', release);
+
+  function restBrush() {
+    const r = pc.getBoundingClientRect();
+    tilt = 18;
+    placeBrush(r.right - 18, r.bottom - 6);
   }
 
   function load(i) {
@@ -393,18 +487,20 @@
     store.set('progress', progress);
     L = levelAt(i);
     target = mix(L.recipe);
-    drops = {};
-    history = [];
-    strokes = [];
+    well = {};
+    brush = {};
     $('lvlName').textContent = `第 ${i + 1} 關・${L.name}`;
     renderBuckets();
     drawTarget();
-    sync();
+    resetLayer();
+    drawPaint();
+    syncUI();
+    restBrush();
     $('box').classList.remove('show');
   }
 
   function finish() {
-    const c = mix(drops);
+    const c = mix(well);
     const pct = similarity(c, target);
     const stars = pct >= 99 ? 3 : pct >= 95 ? 2 : pct >= PASS ? 1 : 0;
     if (stars) {
@@ -445,24 +541,25 @@
   }
   function showHelp() {
     $('boxCard').innerHTML = `<h2>色彩配對</h2><ul class="help">
-      <li>上方的角色就是目標顏色。點下方的顏料桶，每點一下加一滴顏料到畫布上。</li>
-      <li>顏料會像真的一樣混色：藍加黃變綠，加黑會變暗，加白會變淺。</li>
-      <li>調好後按「完成」，相似度 90% 以上過關，99% 拿三星。沒過關可以繼續調整。</li>
-      <li>最多 15 滴，可以復原或清空重來。</li>
+      <li>上方的角色就是目標顏色。</li>
+      <li>按住畫面就能拿起畫筆。把筆停在顏料桶裡沾顏料，停越久沾越多（看筆尖和「筆刷 %」）。</li>
+      <li>拖到中間的調色盤來回刷，顏料就會刷上去；刷得越多，顏色混得越均勻。下方色條顯示各色比例。</li>
+      <li>筆上還有別的顏色時沾新顏料會混在筆上，可以先到「洗筆水」裡停一下洗乾淨。</li>
+      <li>調好後按「完成」，相似度 90% 以上過關，99% 拿三星；沒過關可以繼續刷。</li>
     </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
     $('box').classList.add('show');
     $('bGo').onclick = () => { $('box').classList.remove('show'); store.set('seen', true); };
   }
 
-  $('btnUndo').onclick = () => { const k = history.pop(); if (k) { drops[k]--; if (!drops[k]) delete drops[k]; } sync(); };
-  $('btnClear').onclick = () => { drops = {}; history = []; strokes = []; sync(); };
+  $('btnClear').onclick = () => { well = {}; resetLayer(); drawPaint(); syncUI(); };
   $('btnDone').onclick = finish;
   $('btnLevels').onclick = showLevels;
   $('btnHelp').onclick = showHelp;
-  window.addEventListener('resize', () => { drawTarget(); drawPaint(); });
-  window.__color = { mix, similarity, levelAt, state: () => ({ drops, target, L }) };
+  window.addEventListener('resize', () => { drawTarget(); drawPaint(); restBrush(); });
+  window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }) };
 
   load(progress.level || 0);
+  requestAnimationFrame(tick);
   if (!store.get('seen', false)) showHelp();
 })();
 </script>
