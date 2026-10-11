@@ -23,6 +23,7 @@ the board and slide each one out through the gate of the same color.
 | tools/generate-levels.js | Level generator; an exact solver checks every level and sets its par and move limit |
 | site/sultan/index.html | Sultan's Game: weekly orders, rites, side stories and multiple endings |
 | site/bounce/index.html | Count and Bounce: pour balls through multiplier gates into a cup |
+| site/evony/index.html | 王者之路: Evony-ad style two-lane bridge runner with +1 steps, gates, hordes and a giant boss |
 | site/lord/index.html | 最強領主: swipe an army through gates and traps, storm the castle, upgrade heroes, griffin and town |
 | site/bounce/engine.js | Count and Bounce physics, shared by the page and the level generator |
 | site/bounce/levels.js | Generated Count and Bounce levels (30 levels) |

@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>王者之路</title>
+<meta name="description" content="文明霸業風格小遊戲：在海上長橋選擇跑道，踩過 +1 階梯、穿過倍增門，帶著大軍擊敗巨人首領。">
+<style>
+  :root { --ink: #1d2a3a; --panel: #ffffff; --muted: #6b7a8c; --blue: #2f8cff; --red: #e8473f; --gold: #ffb400; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #0e5a75; color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+    display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  nav.games { width: 100%; max-width: 480px; padding: 8px 16px 0; font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
+  nav.games a { color: #fff; opacity: .7; text-decoration: none; font-weight: 600; }
+  nav.games a.on { opacity: 1; text-decoration: underline; }
+  header { width: 100%; max-width: 480px; padding: 6px 16px; display: flex; align-items: center; justify-content: space-between; color: #fff; }
+  h1 { margin: 0; font-size: 20px; font-weight: 900; }
+  header button { font-size: 13px; padding: 6px 10px; }
+  main { flex: 1; width: 100%; display: flex; justify-content: center; align-items: flex-start; min-height: 0; padding-bottom: 10px; }
+  canvas { border-radius: 18px; box-shadow: 0 10px 30px #0006; display: block; touch-action: none; }
+  .overlay { position: fixed; inset: 0; background: #0a1a2a99; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 5; }
+  .overlay.show { display: flex; }
+  .card { background: var(--panel); border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow: auto; text-align: center; box-shadow: 0 16px 40px #0006; }
+  .card h2 { margin: 0 0 6px; }
+  .card p { color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
+  .stars { font-size: 30px; color: var(--gold); letter-spacing: 6px; }
+  button { font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 12px; padding: 10px 14px; background: #fff; color: var(--ink); box-shadow: 0 3px 0 #0003; cursor: pointer; }
+  button.primary { background: linear-gradient(180deg, #ffcf3f, #ff9f1a); color: #4a2a00; }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  #levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+  #levels button { padding: 8px 0; line-height: 1.2; background: #eef3fb; }
+  #levels button.done { background: #7fd49a; }
+  #levels button.cur { outline: 2px solid var(--blue); }
+  #levels small { display: block; font-size: 10px; min-height: 12px; color: #a87a00; }
+  .help { text-align: left; color: var(--muted); font-size: 14px; padding-left: 18px; }
+  .help li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a class="on" href="./">王者之路</a></nav>
+<header>
+  <h1>王者之路　第 <span id="lvl">1</span> 關</h1>
+  <div class="row"><button id="btnLevels">選關</button><button id="btnHelp">說明</button></div>
+</header>
+<main><canvas id="cv"></canvas></main>
+
+<div class="overlay" id="box"><div class="card" id="boxCard"></div></div>
+
+<script>
+(() => {
+  const W = 360, H = 640;
+  const SPEED = 150, SEG = 420, GAP = 90, STEP = 14;
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('evony.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('evony.' + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  const LEVELS = 30;
+
+  function rng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s + 0x6d2b79f5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // A level is a run of segments on a two-lane bridge. A wall splits the
+  // lanes; it opens only for a short gap at the start of each segment, so you
+  // commit to a lane for the whole segment. Items: +1 steps, gates (+N / xN /
+  // -N) and enemy hordes. The giant at the end has as many troops as a share
+  // of the best possible route, so every level can be won.
+  function apply(n, it) {
+    if (it.kind === 'step') return n + 1;
+    if (it.kind === 'gate') return it.op === 'x' ? n * it.n : it.op === '+' ? n + it.n : Math.max(0, n - it.n);
+    return n - it.n;
+  }
+  function buildLevel(L) {
+    for (let v = 0; ; v++) {
+      const lv = gen(L, v);
+      if (lv.ok) return lv;
+    }
+  }
+  function gen(L, v) {
+    const r = rng(4242 + L * 977 + v * 31337);
+    const pick = a => a[Math.floor(r() * a.length)];
+    const segs = 4 + Math.min(4, Math.floor(L / 4));
+    const items = [];
+    const scale = 1 + L * 0.35;
+    for (let s = 0; s < segs; s++) {
+      const z0 = 200 + s * SEG + GAP;
+      const kinds = ['steps', 'gate', 'horde', 'trick', 'mult'];
+      const a = pick(kinds);
+      let b = pick(kinds);
+      while (b === a) b = pick(kinds);
+      [a, b].forEach((kind, lane) => {
+        const zEnd = z0 + SEG - GAP - 30;
+        if (kind === 'steps') {
+          const k = 10 + Math.floor(r() * 12);
+          for (let i = 0; i < k; i++) items.push({ kind: 'step', lane, z: z0 + 10 + i * STEP });
+        } else if (kind === 'gate') {
+          items.push({ kind: 'gate', lane, z: z0 + 60, op: '+', n: Math.round((5 + r() * 15) * Math.sqrt(scale)) });
+        } else if (kind === 'mult') {
+          items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.round((3 + r() * 6) * Math.sqrt(scale)) });
+          items.push({ kind: 'gate', lane, z: z0 + 170, op: 'x', n: pick([2, 2, 3]) });
+        } else if (kind === 'horde') {
+          items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.round((6 + r() * 14) * scale), len: 120 });
+        } else {
+          // Like the ad: a tempting +3 right before a big horde.
+          items.push({ kind: 'gate', lane, z: z0 + 30, op: '+', n: 3 });
+          items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.round((10 + r() * 16) * scale), len: Math.min(zEnd - z0 - 110, 200) });
+        }
+      });
+    }
+    const end = 200 + segs * SEG + 60;
+    // Best route: lanes are fixed per segment and every effect is monotone,
+    // so picking the better lane segment by segment is optimal.
+    let best = 5, ok = true;
+    const segOf = z => Math.floor((z - 200) / SEG);
+    for (let s = 0; s < segs; s++) {
+      const res = [0, 1].map(lane => items.filter(it => it.lane === lane && segOf(it.z) === s).sort((x, y) => x.z - y.z)
+        .reduce((n, it) => (n <= 0 ? n : apply(n, it)), best));
+      best = Math.max(...res);
+      if (best <= 0) ok = false;
+    }
+    ok = ok && best >= 12;
+    const factor = 0.55 + Math.min(0.35, L * 0.012);
+    return { L, segs, items, end, best, ok, boss: Math.max(6, Math.round(best * factor)) };
+  }
+
+  // ---- Run ----
+  let run = null, scale = 1, last = 0;
+  let progress = store.get('progress', { level: 0, stars: {} });
+  window.__evony = () => run;
+
+  function start(L) {
+    progress.level = L;
+    store.set('progress', progress);
+    const lv = buildLevel(L);
+    run = { lv, z: 0, army: 5, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, foes: lv.boss, t: 0 };
+    lv.items.forEach(it => (it.done = false));
+    $('lvl').textContent = L + 1;
+    $('box').classList.remove('show');
+  }
+
+  const inGap = z => z < 200 || (z - 200) % SEG < GAP;
+  function switchLane(to) {
+    if (!run || run.phase !== 'run' || to === run.lane) return;
+    if (!inGap(run.z) && run.z < run.lv.end - 40) { run.bump = 1; run.floats.push({ text: '牆擋住了', color: '#fff', t: 0 }); return; }
+    run.lane = to;
+  }
+  function float(text, color) { run.floats.push({ text, color, t: 0 }); }
+
+  function update(dt) {
+    if (!run) return;
+    run.t += dt;
+    for (const f of run.floats) f.t += dt;
+    run.floats = run.floats.filter(f => f.t < 0.9);
+    run.bump = Math.max(0, run.bump - dt * 4);
+    run.x += ((run.lane ? 0.5 : -0.5) - run.x) * Math.min(1, dt * 10);
+    if (run.phase === 'run') {
+      const before = run.z;
+      run.z += SPEED * dt;
+      for (const it of run.lv.items) {
+        if (it.done || it.lane !== run.lane) continue;
+        if (it.kind === 'horde') {
+          // Hordes fight over their length.
+          if (run.z < it.z || before > it.z + it.len) continue;
+          const share = Math.min(1, (run.z - Math.max(before, it.z)) / it.len);
+          it.left = it.left == null ? it.n : it.left;
+          const kill = Math.min(it.left, Math.ceil(it.n * share));
+          it.left -= kill;
+          run.army -= kill;
+          if (it.left <= 0) it.done = true;
+        } else if (it.z > before && it.z <= run.z) {
+          it.done = true;
+          const n = apply(run.army, it);
+          if (it.kind === 'gate') float(`${it.op === 'x' ? 'x' : it.op}${it.n}`, n >= run.army ? '#7cf0a0' : '#ff8a80');
+          run.army = n;
+        }
+      }
+      if (run.army <= 0) { run.army = 0; return finish(false); }
+      if (run.z >= run.lv.end) run.phase = 'boss';
+    } else if (run.phase === 'boss') {
+      const k = Math.max(1, Math.ceil(Math.min(run.army, run.foes) * dt * 2.5));
+      run.army -= k;
+      run.foes -= k;
+      if (run.foes <= 0 || run.army <= 0) finish(run.foes <= 0 && run.army > 0);
+    }
+  }
+
+  function finish(win) {
+    if (run.phase === 'end') return;
+    run.phase = 'end';
+    const L = run.lv.L;
+    const stars = win ? (run.army >= run.lv.boss * 0.5 ? 3 : run.army >= run.lv.boss * 0.2 ? 2 : 1) : 0;
+    if (win) {
+      progress.stars[L] = Math.max(progress.stars[L] || 0, stars);
+      progress.level = Math.min(LEVELS - 1, L + 1);
+      store.set('progress', progress);
+    }
+    setTimeout(() => {
+      $('boxCard').innerHTML = `<h2>${win ? '擊敗巨人！' : '大軍潰敗'}</h2>
+        ${win ? `<div class="stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>` : ''}
+        <p>${win ? `剩下 ${run.army} 名士兵，巨人軍團 ${run.lv.boss} 人。` : `巨人軍團有 ${run.lv.boss} 人。看清楚兩條跑道再決定，牆只在缺口處能穿越。`}</p>
+        <div class="row"><button id="bAgain">再試一次</button>${win ? `<button class="primary" id="bNext">${L + 1 >= LEVELS ? '回到第 1 關' : '下一關'}</button>` : ''}</div>`;
+      $('box').classList.add('show');
+      $('bAgain').onclick = () => start(L);
+      if (win) $('bNext').onclick = () => start((L + 1) % LEVELS);
+    }, 700);
+  }
+
+  // ---- Input: tap a side, swipe, or arrow keys ----
+  let sx = null;
+  cv.addEventListener('pointerdown', ev => { sx = ev.clientX; });
+  cv.addEventListener('pointerup', ev => {
+    if (sx == null) return;
+    const dx = ev.clientX - sx;
+    const r = cv.getBoundingClientRect();
+    if (Math.abs(dx) > 25) switchLane(dx > 0 ? 1 : 0);
+    else switchLane(ev.clientX - r.left > r.width / 2 ? 1 : 0);
+    sx = null;
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') switchLane(0);
+    if (e.key === 'ArrowRight') switchLane(1);
+  });
+
+  // ---- Pseudo-3D drawing ----
+  const CAM_BACK = 90, F = 300, HORIZON = 120, CAM_H = 1.6, SX = 44, SY = 74;
+  // Returns [screenX, screenY, depthScale]; depthScale is 1 at the player.
+  function proj(x, z) {
+    const dz = z - (run ? run.z : 0) + CAM_BACK;
+    if (dz < 8) return null;
+    const k = F / dz;
+    const camX = run ? run.x * 0.75 : 0;
+    return [W / 2 + (x - camX) * k * SX, HORIZON + CAM_H * k * SY, dz ? CAM_BACK / dz : 1];
+  }
+  function quad(x0, x1, z0, z1, fill, stroke) {
+    const a = proj(x0, z0), b = proj(x1, z0), c = proj(x1, z1), d = proj(x0, z1);
+    if (!a || !d) return null;
+    ctx.beginPath();
+    ctx.moveTo(...a); ctx.lineTo(...b); ctx.lineTo(...c); ctx.lineTo(...d);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+    return [a, b, c, d];
+  }
+  function text(t, x, y, size, color, stroke) {
+    ctx.font = `900 ${size}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (stroke) { ctx.lineWidth = Math.max(2, size / 6); ctx.strokeStyle = stroke; ctx.strokeText(t, x, y); }
+    ctx.fillStyle = color;
+    ctx.fillText(t, x, y);
+  }
+  function soldier(x, y, s, body, head) {
+    ctx.fillStyle = body;
+    ctx.fillRect(x - s * 0.35, y - s * 1.1, s * 0.7, s * 0.9);
+    ctx.fillStyle = head;
+    ctx.beginPath();
+    ctx.arc(x, y - s * 1.3, s * 0.32, 0, 7);
+    ctx.fill();
+  }
+
+  function draw() {
+    // Sea and sky
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#9ad8f5');
+    g.addColorStop(HORIZON / H, '#5fb6d6');
+    g.addColorStop(HORIZON / H + 0.01, '#2a8cae');
+    g.addColorStop(1, '#0e5a75');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff22';
+    for (let i = 0; i < 30; i++) { const y = HORIZON + ((i * 37 + (run ? run.z * 0.6 : 0)) % (H - HORIZON)); ctx.fillRect((i * 83) % W, y, 18, 2); }
+    if (!run) { text('王者之路', W / 2, H / 2, 32, '#fff', '#0006'); return; }
+
+    const z = run.z, far = z + 900;
+    // Bridge deck and rails
+    quad(-1.15, 1.15, Math.max(z - CAM_BACK + 10, 0), far, '#c9ccd2');
+    quad(-1.15, -1.05, Math.max(z - CAM_BACK + 10, 0), far, '#e9ecf0');
+    quad(1.05, 1.15, Math.max(z - CAM_BACK + 10, 0), far, '#e9ecf0');
+    // Deck stripes for a sense of speed
+    for (let s = Math.floor((z - CAM_BACK) / 40) * 40; s < far; s += 40) quad(-1.05, 1.05, s, s + 3, '#b8bcc4');
+
+    const drawWall = () => {
+      // Center wall with gaps, drawn as an upright face
+      const segs = run.lv.segs;
+      for (let s = segs - 1; s >= 0; s--) {
+        const z0 = Math.max(200 + s * SEG + GAP, z - CAM_BACK + 10), z1 = Math.min(200 + (s + 1) * SEG, far);
+        if (z1 <= z0) continue;
+        const g0 = proj(0, z0), g1 = proj(0, z1);
+        if (!g0 || !g1) continue;
+        const h0 = 0.9 * (F / (z0 - z + CAM_BACK)) * SY, h1 = 0.9 * (F / (z1 - z + CAM_BACK)) * SY;
+        ctx.beginPath();
+        ctx.moveTo(g0[0], g0[1]); ctx.lineTo(g1[0], g1[1]); ctx.lineTo(g1[0], g1[1] - h1); ctx.lineTo(g0[0], g0[1] - h0);
+        ctx.closePath();
+        const wg = ctx.createLinearGradient(0, g0[1] - h0, 0, g0[1]);
+        wg.addColorStop(0, '#ffffff');
+        wg.addColorStop(1, '#cfd5dc');
+        ctx.fillStyle = wg;
+        ctx.fill();
+        ctx.strokeStyle = '#9aa4b0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    };
+
+    // Items, far to near. The lane away from the camera is drawn first so the
+    // wall can hide it.
+    const vis = run.lv.items.filter(it => it.z + (it.len || 0) > z - CAM_BACK + 12 && it.z < far).sort((a, b) => b.z - a.z);
+    const near = run.x > 0 ? 1 : 0;
+    const drawItems = list => {
+    for (const it of list) {
+      const x0 = it.lane ? 0.08 : -1.02, x1 = it.lane ? 1.02 : -0.08, cx = (x0 + x1) / 2;
+      if (it.kind === 'step') {
+        const q = quad(x0, x1, it.z, it.z + STEP - 2, it.done ? '#5aa8e8' : '#2f8cff', '#1a5fb8');
+        if (q && !it.done) { const p = proj(cx, it.z + 6); text('+1', p[0], p[1], Math.max(6, Math.min(p[2] * 26, (q[0][1] - q[3][1]) * 1.1)), '#fff'); }
+      } else if (it.kind === 'gate') {
+        const good = it.op !== '-';
+        const p0 = proj(x0, it.z), p1 = proj(x1, it.z);
+        if (!p0) continue;
+        const h = (p1[0] - p0[0]) * 0.35;
+        ctx.globalAlpha = it.done ? 0.3 : 0.85;
+        ctx.fillStyle = good ? '#3ddc84' : '#ff5a52';
+        ctx.fillRect(p0[0], p0[1] - h, p1[0] - p0[0], h);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p0[0], p0[1] - h, p1[0] - p0[0], h);
+        ctx.globalAlpha = 1;
+        text(`${it.op === 'x' ? 'x' : it.op}${it.n}`, (p0[0] + p1[0]) / 2, p0[1] - h / 2, Math.max(8, h * 0.6), '#fff', '#0005');
+      } else if (it.kind === 'horde' && !it.done) {
+        const left = it.left == null ? it.n : it.left;
+        const rows = Math.min(14, Math.ceil(left / 4));
+        const per = Math.ceil(left / rows);
+        for (let rI = rows - 1; rI >= 0; rI--) {
+          const zz = it.z + (rI / rows) * it.len;
+          for (let c = 0; c < Math.min(per, 6); c++) {
+            const p = proj(x0 + 0.1 + (c / 5) * (x1 - x0 - 0.2), zz);
+            if (!p) continue;
+            soldier(p[0], p[1], Math.max(1.5, p[2] * 9), '#e8473f', '#b92d26');
+          }
+        }
+        const p = proj(cx, it.z);
+        if (p) text(String(left), p[0], p[1] - p[2] * 40, Math.max(10, p[2] * 30), '#fff', '#e8473f');
+      }
+    }
+
+    };
+    drawItems(vis.filter(it => it.lane !== near));
+    drawWall();
+    drawItems(vis.filter(it => it.lane === near));
+
+    // Giant boss at the end
+    const pb = proj(0, run.lv.end + 60);
+    if (pb) {
+      const s = pb[2] * 200;
+      for (let i = 0; i < Math.min(40, Math.ceil(run.foes / 5)); i++) {
+        const p = proj(-0.9 + (i % 10) * 0.2, run.lv.end + 20 + Math.floor(i / 10) * 12);
+        if (p) soldier(p[0], p[1], Math.max(1.5, p[2] * 8), '#e8473f', '#b92d26');
+      }
+      ctx.fillStyle = '#c98b6b';
+      ctx.beginPath(); ctx.ellipse(pb[0], pb[1] - s * 0.55, s * 0.32, s * 0.4, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(pb[0], pb[1] - s * 1.05, s * 0.16, 0, 7); ctx.fill();
+      ctx.fillStyle = '#7a4a2a';
+      ctx.fillRect(pb[0] - s * 0.32, pb[1] - s * 0.3, s * 0.64, s * 0.12);
+      ctx.strokeStyle = '#b92d26'; ctx.lineWidth = Math.max(1, s * 0.03);
+      ctx.beginPath(); ctx.moveTo(pb[0] - s * 0.1, pb[1] - s * 0.8); ctx.lineTo(pb[0] + s * 0.12, pb[1] - s * 0.55); ctx.stroke();
+      text(`巨人軍團 ${Math.max(0, run.foes)}`, pb[0], pb[1] - s * 1.35, Math.max(10, s * 0.14), '#fff', '#e8473f');
+    }
+
+    // Player army
+    const pp = proj(run.x, z);
+    const n = run.army;
+    const shown = Math.min(n, 40);
+    const rr = rng(7);
+    for (let i = shown - 1; i >= 1; i--) {
+      const back = 4 + Math.floor(i / 5) * 5, side = ((i % 5) - 2) * 0.09 + (rr() - 0.5) * 0.04;
+      const p = proj(run.x + side, z - back);
+      if (p) soldier(p[0], p[1], p[2] * 10, '#2f8cff', '#ffd23f');
+    }
+    const shake = run.bump ? Math.sin(run.t * 60) * 6 * run.bump : 0;
+    soldier(pp[0] + shake, pp[1], 16, '#1e5fd6', '#ffd23f');
+    ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 3;
+    ctx.strokeRect(pp[0] - 34 + shake, pp[1] - 52, 68, 58);
+    text(String(n), pp[0], pp[1] + 22, 22, '#fff', '#1e5fd6');
+    for (const f of run.floats) {
+      ctx.globalAlpha = 1 - f.t;
+      text(f.text, pp[0], pp[1] - 70 - f.t * 50, 22, f.color, '#0006');
+      ctx.globalAlpha = 1;
+    }
+
+    // HUD
+    ctx.fillStyle = '#00000040';
+    ctx.fillRect(40, 14, W - 80, 8);
+    ctx.fillStyle = '#ffd23f';
+    ctx.fillRect(40, 14, (W - 80) * Math.min(1, z / run.lv.end), 8);
+    if (run.phase === 'run' && inGap(z) && z > 30) text('可以換跑道！', W / 2, 46, 16, '#fff', '#2f8cff');
+    if (z < 60) text('點左右或滑動切換跑道', W / 2, 70, 15, '#fff', '#0006');
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000 || 0);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+  function fit() {
+    const availH = window.innerHeight - cv.getBoundingClientRect().top - 12;
+    const availW = Math.min(window.innerWidth - 24, 480);
+    scale = Math.min(availW / W, availH / H);
+    const dpr = window.devicePixelRatio || 1;
+    cv.style.width = W * scale + 'px';
+    cv.style.height = H * scale + 'px';
+    cv.width = Math.round(W * scale * dpr);
+    cv.height = Math.round(H * scale * dpr);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  }
+
+  function showLevels() {
+    $('boxCard').innerHTML = `<h2>選擇關卡</h2><div id="levels">${Array.from({ length: LEVELS }, (_, i) => {
+      const s = progress.stars[i] || 0;
+      return `<button data-l="${i}" class="${s ? 'done' : ''} ${i === progress.level ? 'cur' : ''}">${i + 1}<small>${'★'.repeat(s)}</small></button>`;
+    }).join('')}</div><button id="bClose">關閉</button>`;
+    $('box').classList.add('show');
+    document.querySelectorAll('[data-l]').forEach(b => (b.onclick = () => start(+b.dataset.l)));
+    $('bClose').onclick = () => { $('box').classList.remove('show'); if (!run) start(progress.level); };
+  }
+  function showHelp() {
+    $('boxCard').innerHTML = `<h2>王者之路</h2><ul class="help">
+      <li>你帶著軍隊沿著海上長橋前進，橋中間有一道牆把路分成兩條跑道。</li>
+      <li>牆只在每段開頭留有缺口，看到「可以換跑道！」時點左右兩側或滑動切換。</li>
+      <li>藍色 +1 階梯一步一兵，綠色門加兵或翻倍，紅色門減兵；紅色敵軍會拚掉你的士兵。</li>
+      <li>小心誘人的 +3，後面常常藏著大軍。抵達終點後與巨人軍團決戰，兵力多於對方即獲勝。</li>
+    </ul><button class="primary" id="bGo">開始</button>`;
+    $('box').classList.add('show');
+    $('bGo').onclick = () => start(progress.level);
+  }
+
+  $('btnLevels').onclick = showLevels;
+  $('btnHelp').onclick = showHelp;
+  window.addEventListener('resize', fit);
+  fit();
+  showHelp();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
