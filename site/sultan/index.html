@@ -40,7 +40,6 @@
     background-attachment: fixed;
   }
   a { color: var(--gold); }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 10px 14px 230px; }
   nav.games { font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
   nav.games a { color: var(--muted); text-decoration: none; }
   nav.games a.on { color: var(--gold2); }
@@ -136,11 +135,18 @@
   .event .opts { display: flex; flex-direction: column; gap: 6px; }
   .event .opts button { text-align: left; font-weight: 400; background: #fff5; box-shadow: none; }
 
-  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: 6px 12px 8px; background: linear-gradient(180deg, #1a0d0ae6, #0d0605f2); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px #000a; }
-  .dock .bar { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  .dock { display: flex; gap: 10px; padding: 6px 10px 8px; background: linear-gradient(180deg, #1a0d0ae6, #0d0605f2); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px #000a; z-index: 4; }
+  .dock .handwrap { flex: 1; min-width: 0; }
+  .dock .bar { display: flex; align-items: center; gap: 10px; }
   .dock .bar .lbl { font-size: 13px; color: var(--gold); letter-spacing: 2px; }
   .dock .bar .hint { font-size: 12px; color: var(--muted); flex: 1; }
-  .dock .hand { max-width: 1180px; margin: 0 auto; display: flex; gap: 10px; overflow-x: auto; padding: 6px 2px 4px; }
+  .dock .hand { display: flex; gap: 10px; overflow-x: auto; padding: 6px 2px 4px; }
+  .think {
+    flex: 0 0 auto; width: 96px; border: 2px dashed #8a6a48; border-radius: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 13px; letter-spacing: 2px; cursor: pointer; background: #0004;
+  }
+  .think.hover, .think.armed { border-color: var(--gold2); border-style: solid; color: var(--gold2); background: #d9b26a22; }
+  .think svg { width: 46px; height: 46px; }
   .ghostcard { position: fixed; z-index: 50; pointer-events: none; transform: rotate(-4deg) scale(1.05); opacity: .92; }
 
   #log { background: #0005; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; max-height: 240px; overflow: auto; font-size: 14px; }
@@ -166,40 +172,151 @@
   .help li { margin-bottom: 4px; }
   .shop div { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px dashed #7a5a2a; padding: 6px 0; font-size: 14px; }
   .empty { color: var(--muted); font-size: 14px; }
+
+  /* Landscape table layout */
+  html, body { height: 100%; overflow: hidden; }
+  .app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; }
+  .topbar { display: flex; align-items: center; gap: 8px 14px; padding: 6px 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: #0005; }
+  .topbar h1 { font-size: 22px; }
+  .topbar .hud { flex: 1; }
+  .main { display: grid; grid-template-columns: 150px 1fr 300px; min-height: 0; }
+  .orders { overflow-y: auto; padding: 6px 10px; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; }
+  .orders #orders { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .tablewrap { position: relative; min-height: 0; min-width: 0; }
+  .table { height: 100%; overflow-y: auto; padding: 4px 14px 12px; }
+  .side { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); padding: 8px 10px; gap: 8px; }
+  .side .tabs { display: flex; gap: 6px; }
+  .side .tabs button { flex: 1; padding: 5px; font-size: 13px; }
+  .side .tabs button:not(.on) { background: transparent; color: var(--gold2); border-color: var(--line); box-shadow: none; }
+  .sidebody { overflow-y: auto; flex: 1; min-height: 0; }
+  .side .events { grid-template-columns: 1fr; }
+  #log { max-height: none; }
+  .main h2 { margin: 8px 0 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .tile {
+    position: relative; border-radius: 12px; padding: 10px 12px; cursor: pointer; min-height: 104px;
+    background: linear-gradient(170deg, #4a2a1e, #24120d); border: 2px solid var(--line); box-shadow: 0 6px 14px #0009, inset 0 0 0 1px #d9b26a22;
+    display: flex; flex-direction: column; gap: 4px; transition: transform .12s, border-color .12s;
+  }
+  .tile:hover { transform: translateY(-2px); border-color: var(--gold); }
+  .tile.open { border-color: var(--gold2); box-shadow: 0 0 0 2px var(--gold2), 0 6px 14px #0009; }
+  .tile.running { border-color: var(--gold); }
+  .tile h3 { margin: 0; color: var(--gold2); font-size: 17px; letter-spacing: 2px; }
+  .tile .meta { font-size: 12px; color: var(--muted); }
+  .tile .st { margin-top: auto; font-size: 12px; color: var(--text); }
+  .tile .st.go { color: var(--gold2); }
+  .tile .seal { position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 0 6px; border-radius: 6px; color: #fff; }
+  .tile .prog { height: 6px; border-radius: 3px; background: #0006; overflow: hidden; }
+  .tile .prog div { height: 100%; background: var(--gold); }
+  .panel { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 3; display: none; max-height: calc(100% - 20px); overflow-y: auto; box-shadow: 0 -10px 30px #000c; border-radius: 14px; }
+  .panel.show { display: block; }
+  .panel .rite { border: 2px solid var(--gold); }
+  .panel .x { float: right; margin-left: 10px; padding: 2px 10px; }
+  .rotate { position: fixed; inset: 0; z-index: 80; background: #120806f2; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; color: var(--gold2); }
+  .rotate .phone { width: 70px; height: 110px; border: 4px solid var(--gold); border-radius: 12px; animation: turn 2s ease-in-out infinite; }
+  @keyframes turn { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+
+  /* Short landscape screens (phones turned sideways) */
+  @media (max-height: 560px) {
+    .panel { top: 4px; bottom: 4px; left: 4px; right: 4px; max-height: none; }
+    .topbar { padding: 3px 10px; gap: 4px 10px; }
+    .topbar h1 { font-size: 16px; letter-spacing: 3px; }
+    nav.games { display: none; }
+    .chip { padding: 1px 8px; font-size: 12px; }
+    .links { font-size: 12px; }
+    #btnEnd { padding: 4px 10px; font-size: 13px; }
+    .main { grid-template-columns: 104px 1fr 220px; }
+    .main h2 { font-size: 12px; margin: 4px 0; }
+    .gcard { width: 84px; height: 128px; padding: 4px; border-width: 2px; }
+    .gcard .portrait { width: 30px; height: 30px; font-size: 15px; margin-top: 2px; }
+    .gcard .nm { font-size: 12px; }
+    .gcard .tt, .gcard .tags i { font-size: 9px; }
+    .gcard .at { font-size: 8px; }
+    .gcard .at span b { font-size: 9.5px; }
+    .gcard.coin .big { font-size: 18px; margin-top: 4px; }
+    .gcard.item .desc { font-size: 9px; }
+    .gcard.sultan .type { font-size: 20px; }
+    .gcard.sultan .seal, .gcard.sultan .left { font-size: 9px; }
+    .dock { padding: 3px 8px 4px; }
+    .dock .bar { display: none; }
+    .think { width: 66px; font-size: 11px; }
+    .think svg { width: 32px; height: 32px; }
+    .tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+    .tile { min-height: 70px; padding: 6px 8px; }
+    .tile h3 { font-size: 14px; }
+    .tile .meta, .tile .st { font-size: 10px; }
+    .slot { width: 56px; height: 76px; font-size: 10px; }
+    .rite { padding: 8px; }
+    .rite p { font-size: 11px; margin: 2px 0 6px; }
+    .event { padding: 8px 10px; }
+    .event p, .event .opts button { font-size: 12px; }
+    #log { font-size: 12px; }
+  }
+
+  /* Portrait phones: ask to rotate, or fall back to a scrolling layout */
+  @media (orientation: portrait) and (max-width: 900px) {
+    body:not(.portrait-ok) .rotate { display: flex; }
+    html, body { overflow: auto; height: auto; }
+    .app { height: auto; display: block; padding-bottom: 270px; }
+    .main { display: block; }
+    .orders { border: 0; align-items: stretch; }
+    .orders #orders { flex-direction: row; overflow-x: auto; }
+    .table { height: auto; }
+    .side { border: 0; }
+    .sidebody { overflow: visible; }
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; }
+    .panel { position: fixed; bottom: 262px; max-height: calc(100vh - 290px); }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="games"><a href="../">Block Out</a><a class="on" href="./">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a></nav>
-  <header>
+<div class="app">
+  <div class="topbar">
     <h1>蘇丹的遊戲</h1>
+    <nav class="games"><a href="../">Block Out</a><a class="on" href="./">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a></nav>
     <div class="hud">
       <div class="chip">第<b id="sDay">1</b> / 56 天</div>
       <div class="chip">金幣<b id="sGold">0</b></div>
       <div class="chip" id="chipSlander">讒言<b id="sSlander">0</b> / 3</div>
       <div class="chip" id="chipMood">妻子不滿<b id="sMood">0</b> / 3</div>
       <div class="chip">赦免令<b id="sPardon">0</b></div>
-      <button id="btnEnd">結束這一天</button>
     </div>
-  </header>
-  <div class="links"><a href="#" id="lnkHelp">玩法說明</a><a href="#" id="lnkShop">市集</a><a href="#" id="lnkRestart">重新開始</a></div>
-
-  <h2>城中事件</h2>
-  <div class="events" id="events"></div>
-
-  <h2>儀式</h2>
-  <div class="rites" id="rites"></div>
-
-  <h2>城中人物</h2>
-  <div class="rowscroll" id="npcs"></div>
-
-  <h2>紀事</h2>
-  <div id="log"></div>
+    <div class="links"><a href="#" id="lnkHelp">說明</a><a href="#" id="lnkShop">市集</a><a href="#" id="lnkRestart">重新開始</a></div>
+    <button id="btnEnd">結束這一天</button>
+  </div>
+  <div class="main">
+    <aside class="orders"><h2>蘇丹卡</h2><div id="orders"></div></aside>
+    <section class="tablewrap">
+      <div class="table" id="table">
+        <h2>儀式（點擊打開）</h2>
+        <div class="tiles" id="rites"></div>
+        <h2>城中人物</h2>
+        <div class="rowscroll" id="npcs"></div>
+      </div>
+      <div class="panel" id="ritePanel"></div>
+    </section>
+    <aside class="side">
+      <div class="tabs"><button data-side="events" class="on">城中事件</button><button data-side="log">紀事</button></div>
+      <div class="sidebody events" id="events"></div>
+      <div class="sidebody" id="log" style="display:none"></div>
+    </aside>
+  </div>
+  <div class="dock">
+    <div class="think" id="think" title="把卡牌拖到這裡：查看說明、親手處決或遣散">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 4C17 4 7 14 7 28c0 8 4 14 9 17v9c0 3 2 5 5 5h22c3 0 5-2 5-5v-9c5-3 9-9 9-17C57 14 47 4 32 4zm-11 34a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm22 0a6 6 0 1 1 0-12 6 6 0 0 1 0 12zM29 47l3-7 3 7h-6z"/></svg>
+      俺尋思
+    </div>
+    <div class="handwrap">
+      <div class="bar"><span class="lbl">你的牌</span><span class="hint" id="hint">點擊儀式打開卡槽，再把卡牌拖進去（或先點卡牌再點卡槽）。卡牌拖到左邊骷髏可「俺尋思」。</span></div>
+      <div class="hand" id="hand"></div>
+    </div>
+  </div>
 </div>
 
-<div class="dock">
-  <div class="bar"><span class="lbl">你的牌</span><span class="hint" id="hint">拖曳卡牌放進儀式的卡槽，或先點卡牌再點卡槽。</span></div>
-  <div class="hand" id="hand"></div>
+<div class="rotate" id="rotate">
+  <div class="phone"></div>
+  <div>蘇丹的遊戲是橫式遊戲<br>請將裝置轉為橫向</div>
+  <button class="ghost" id="btnPortrait">仍要直式遊玩</button>
 </div>
 
 <div class="overlay" id="box"><div class="modal" id="modal"></div></div>
@@ -271,7 +388,7 @@
   const $ = id => document.getElementById(id);
   const rand = n => Math.floor(Math.random() * n);
   const pick = a => a[rand(a.length)];
-  let S, nextId, selected = null;
+  let S, nextId, selected = null, openRite = null, sideTab = 'events';
 
   const blankStats = () => ({ body: 0, combat: 0, charm: 0, social: 0, wit: 0, stealth: 0, survival: 0, magic: 0 });
   function makePerson(rank, follower) {
@@ -380,13 +497,17 @@
     for (const failed of S.sultan.filter(c => !c.done && c.deadline <= S.day)) {
       if (S.pardon > 0) {
         S.pardon--;
+        S.flags.pardoned = true;
         failed.done = true;
         log(`【${RANKS[failed.rank]}・${TYPES[failed.type].name}】的期限已到。你呈上赦免令，蘇丹撇撇嘴放過了你。`, 'gold');
         continue;
       }
       return ending(false, '處決', `【${RANKS[failed.rank]}・${TYPES[failed.type].name}】的期限已到。侍衛把你拖到廣場，蘇丹打了個呵欠。`);
     }
-    if (S.day >= LAST_DAY) return ending(true, '倖存', '八週過去，蘇丹厭倦了這個遊戲。你活了下來——至少現在是。');
+    if (S.day >= LAST_DAY) {
+      if (!S.flags.pardoned) return ending(true, '全折卡', '八週以來，你折斷了蘇丹交給你的每一張卡。蘇丹第一次正眼看你：「有意思。明天，我們換個玩法。」');
+      return ending(true, '倖存', '八週過去，蘇丹厭倦了這個遊戲。你活了下來——至少現在是。');
+    }
     S.day++;
     const drifters = S.people.filter(p => !p.follower && !p.quest && !placedIn(p.id));
     if (drifters.length > 3 && Math.random() < 0.3) {
@@ -966,7 +1087,7 @@
     $('hint').textContent = msg;
     $('hint').style.color = 'var(--red)';
     clearTimeout(flash.t);
-    flash.t = setTimeout(() => { $('hint').textContent = '拖曳卡牌放進儀式的卡槽，或先點卡牌再點卡槽。'; $('hint').style.color = ''; }, 1800);
+    flash.t = setTimeout(() => { $('hint').textContent = '點擊儀式打開卡槽，再把卡牌拖進去（或先點卡牌再點卡槽）。卡牌拖到左邊骷髏可「俺尋思」。'; $('hint').style.color = ''; }, 1800);
     return false;
   }
 
@@ -988,8 +1109,9 @@
     ev.preventDefault();
     drag.ghost.style.left = ev.clientX - 58 + 'px';
     drag.ghost.style.top = ev.clientY - 88 + 'px';
-    document.querySelectorAll('.slot.hover').forEach(s => s.classList.remove('hover'));
-    const slot = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.slot');
+    document.querySelectorAll('.slot.hover, .think.hover').forEach(s => s.classList.remove('hover'));
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const slot = under?.closest('.slot') || under?.closest('#think');
     if (slot) slot.classList.add('hover');
   }, { passive: false });
   document.addEventListener('pointercancel', () => {
@@ -1001,10 +1123,12 @@
     const d = drag;
     drag = null;
     if (d.ghost) d.ghost.remove();
-    document.querySelectorAll('.slot.hover').forEach(s => s.classList.remove('hover'));
+    document.querySelectorAll('.slot.hover, .think.hover').forEach(s => s.classList.remove('hover'));
     if (d.moved) {
-      const slot = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.slot');
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      const slot = under?.closest('.slot');
       if (slot) place(slot.dataset.rite, +slot.dataset.i, d.id);
+      else if (under?.closest('#think')) think(d.id);
     } else {
       selected = selected === d.id ? null : d.id;
       render();
@@ -1050,6 +1174,19 @@
       <span class="rk rk${c.rank}">${RK[c.rank]}</span>
       <div class="portrait">${c.you ? '我' : c.name[0]}</div><div class="nm">${c.name}</div><div class="tt">${c.title}</div>
       <div class="at">${at}</div><div class="tags">${tags}</div>${statusTag(c.id)}</div>`;
+  }
+
+  function tileHTML(k) {
+    const def = RITES[k], r = S.rites[k];
+    const filled = r.slots.filter(x => x != null).length;
+    let st;
+    if (r.running) st = `<div class="st go">進行中・剩 ${r.daysLeft} 天</div><div class="prog"><div style="width:${((def.days - r.daysLeft) / def.days) * 100}%"></div></div>`;
+    else if (filled) st = `<div class="st">${blocker(k) === null ? '<b style="color:var(--green)">可以開始</b>' : `已放 ${filled} / ${def.slots.length}`}</div>`;
+    else st = `<div class="st" style="color:var(--muted)">空閒</div>`;
+    const seal = def.sultan ? `<span class="seal" style="background:${TYPES[def.sultan].color}">${TYPES[def.sultan].name}</span>` : '';
+    const extra = k === 'court' ? `・反對 ${S.courtOpp}` : '';
+    return `<div class="tile ${openRite === k ? 'open' : ''} ${r.running ? 'running' : ''}" data-rite="${k}">${seal}<h3>${def.name}</h3>
+      <div class="meta">需 ${def.days} 天${def.attrs.length ? `・${def.attrs.map(a => ATTRS[a]).join('＋')}` : ''}${extra}</div>${st}</div>`;
   }
 
   function riteHTML(k) {
@@ -1114,16 +1251,74 @@
       return `<div class="event"><h3>${ev.title}<span>${left <= 1 ? '今日為限' : `剩 ${left} 天`}</span></h3><p>${text}</p><div class="opts">${opts}</div></div>`;
     }).join('') : '<div class="empty">今天城裡風平浪靜。</div>';
 
-    $('rites').innerHTML = Object.keys(RITES).map(riteHTML).join('');
+    $('rites').innerHTML = Object.keys(RITES).map(tileHTML).join('');
+    $('ritePanel').classList.toggle('show', !!openRite);
+    let panel = openRite ? riteHTML(openRite).replace('<div class="top">', '<button class="ghost x" id="btnClosePanel">收起</button><div class="top">') : '';
+    if (openRite && RITES[openRite].slots.some(([t]) => t === 'npc' || t === 'target') && !S.rites[openRite].running) {
+      const npcList = S.people.filter(p => !p.follower);
+      panel = panel.replace(/<\/div>$/, `<h2 style="margin:10px 0 4px">可選目標（城中人物${RITES[openRite].slots.some(([t]) => t === 'target') ? '；也可從手牌拖自己的門客' : ''}）</h2>
+        <div class="rowscroll">${npcList.length ? npcList.map(cardHTML).join('') : '<div class="empty">城裡沒有你認識的人。去酒館看看吧。</div>'}</div></div>`);
+    }
+    $('ritePanel').innerHTML = panel;
+    if (openRite) $('btnClosePanel').onclick = () => { openRite = null; render(); };
+    document.querySelectorAll('.tile').forEach(t => (t.onclick = () => { openRite = openRite === t.dataset.rite ? null : t.dataset.rite; render(); }));
+    $('events').style.display = sideTab === 'events' ? '' : 'none';
+    $('log').style.display = sideTab === 'log' ? '' : 'none';
+    document.querySelectorAll('[data-side]').forEach(b => {
+      b.classList.toggle('on', b.dataset.side === sideTab);
+      b.textContent = b.dataset.side === 'events' ? `城中事件${S.events.length ? `（${S.events.length}）` : ''}` : '紀事';
+      b.onclick = () => { sideTab = b.dataset.side; render(); };
+    });
+    $('think').classList.toggle('armed', selected != null);
     const npcs = S.people.filter(p => !p.follower);
     $('npcs').innerHTML = npcs.length ? npcs.map(cardHTML).join('') : '<div class="empty">城裡沒有你認識的人。去酒館看看吧。</div>';
     const live = S.sultan.filter(c => !c.done || c.deadline >= S.day - 1).slice(-5);
-    $('hand').innerHTML = [...live, GOLD_CARD, ...S.people.filter(p => p.follower), ...S.items].map(cardHTML).join('');
+    $('orders').innerHTML = live.length ? live.map(cardHTML).join('') : '<div class="empty">暫無旨意</div>';
+    $('hand').innerHTML = [GOLD_CARD, ...S.people.filter(p => p.follower), ...S.items].map(cardHTML).join('');
     $('log').innerHTML = S.log.map(l => `<div class="${l.cls}">第 ${l.day} 天｜${l.text}</div>`).join('');
 
     document.querySelectorAll('[data-e]').forEach(b => (b.onclick = () => chooseEvent(+b.dataset.e, +b.dataset.o)));
     document.querySelectorAll('.slot').forEach(s => (s.onclick = () => clickSlot(s.dataset.rite, +s.dataset.i)));
     document.querySelectorAll('[data-start]').forEach(b => (b.onclick = () => startRite(b.dataset.start)));
+  }
+
+  // 俺尋思: drop a card on the skull to read about it or act on it directly.
+  function think(id) {
+    if (S.over) return;
+    const c = cardById(id);
+    if (!c) return;
+    let html = '', acts = [];
+    if (c.kind === 'gold') {
+      html = `<h3>金幣</h3><p>你有 ${S.gold} 金幣。金幣靠「治理家業」賺取，可以花在酒館、歡愉之館、一擲千金與市集。</p>`;
+    } else if (c.kind === 'sultan') {
+      const where = { lust: '在家行淫、歡愉之館', luxury: '一擲千金', conquest: '征服', slaughter: '暗殺' }[c.type];
+      html = `<h3>${RANKS[c.rank]}・${TYPES[c.type].name}</h3><p>${TYPES[c.type].text}</p>
+        <p>把這張卡放進「${where}」即可折斷它。對象的等級必須是${RANKS[c.rank]}或更高。剩餘 ${c.deadline - S.day + 1} 天。</p>`;
+      if (c.type === 'slaughter' && !c.done) {
+        const victims = S.people.filter(p => p.follower && !p.you && p.rank >= c.rank && !isLocked(p.id));
+        html += victims.length ? '<p><b>俺尋思……不如親手處決一名追隨者？</b></p>' : `<p class="note">你身邊沒有${RANKS[c.rank]}以上、又空閒的追隨者可以處決。</p>`;
+        acts = victims.map(v => [`處決 ${label(v)}`, () => {
+          removePerson(v);
+          c.done = true;
+          removeFromRites(c.id);
+          S.done++;
+          log(`你親手處決了${label(v)}。【${RANKS[c.rank]}・殺戮】被折斷了。`, 'bad');
+          if (v.wife) log('你殺死了自己的妻子。整座宅邸陷入死寂。', 'bad');
+          onKilled(v);
+        }]);
+      }
+    } else if (c.stats) {
+      const at = Object.entries(ATTRS).map(([k, v]) => `${v} ${c.stats[k]}`).join('、');
+      const where = placedIn(c.id);
+      html = `<h3>${c.name}</h3><p>${RANKS[c.rank]}・${c.title}${c.tags.length ? `（${c.tags.join('、')}）` : ''}</p><p>${at}</p>
+        <p class="note">${c.you ? '這就是你。你死了，遊戲就結束了。' : c.wife ? '你的妻子。在家行淫時選她不會惹她不滿。' : c.follower ? (where ? `目前在「${RITES[where].name}」。` : '空閒中。') : '城中人物，可以成為征服或暗殺的目標。'}${c.tags.includes('貴族') ? '貴族可以上朝。' : ''}</p>`;
+      if (c.follower && !c.you && !c.wife && !isLocked(c.id)) acts.push([`遣散 ${c.name}`, () => { c.follower = false; removeFromRites(c.id); log(`你遣散了${label(c)}。`); }]);
+    } else {
+      html = `<h3>${c.name}</h3><p>${c.desc}</p><p class="note">${c.kind === 'book' ? '放進「讀書」儀式使用。' : '放進儀式的物品槽使用，用後消耗。'}</p>`;
+    }
+    showModal(html + `<div class="btns" style="flex-direction:column">${acts.map((a, i) => `<button data-act="${i}">${a[0]}</button>`).join('')}<button class="ghost" id="btnClose" style="color:var(--ink);border-color:var(--ink)">關閉</button></div>`);
+    document.querySelectorAll('[data-act]').forEach(b => (b.onclick = () => { acts[+b.dataset.act][1](); hideModal(); save(); render(); }));
+    $('btnClose').onclick = hideModal;
   }
 
   function showModal(html) { $('modal').innerHTML = html; $('box').classList.add('show'); }
@@ -1159,11 +1354,12 @@
     showModal(`<h3>玩法說明</h3><ul class="help">
       <li>每週蘇丹會給你一張蘇丹卡：縱慾、奢靡、征服、殺戮，等級為岩石、青銅、白銀、黃金。七天內沒消耗掉就會被處決，撐過八週即倖存。</li>
       <li>把蘇丹卡拖進對應的儀式才能消耗：縱慾→在家行淫或歡愉之館、奢靡→一擲千金、殺戮→暗殺、征服→征服。對象等級必須不低於蘇丹卡，黃金殺戮就得殺一個黃金人物。</li>
-      <li>把人物、金幣、物品拖進卡槽（或先點卡牌再點卡槽），湊齊必要卡槽後按「開始儀式」。點已放入的卡槽可取回卡牌。儀式要花數天，期間卡牌被鎖住。</li>
+      <li>點擊桌上的儀式打開卡槽，把人物、金幣、物品拖進去（或先點卡牌再點卡槽），湊齊必要卡槽後按「開始儀式」。點已放入的卡槽可取回卡牌。儀式要花數天，期間卡牌被鎖住。</li>
+      <li>把卡牌拖到左下角的骷髏「俺尋思」：查看說明、親手處決追隨者來折斷殺戮卡，或遣散門客。</li>
       <li>判定：骰子數等於參與者相關屬性的總和；對抗判定會先扣掉對方的屬性，對方太強就直接失敗。每顆骰子的成功率由難度決定。</li>
       <li>情報讓失敗的判定重擲一次，金骰子直接 +1 成功，書可以提升屬性。</li>
       <li>治理家業（智慧＋社交）是主要收入。每天記得派貴族上朝，否則讒言累積到 3 會被追加旨意。妻子不滿到 3 會出事。</li>
-      <li>城中事件會串成支線：維齊爾的陰謀、公主的出逃、地下反抗軍、星盤之謎。結局不只一種。</li>
+      <li>城中事件會串成支線：維齊爾的陰謀、公主的出逃、地下反抗軍、星盤之謎。結局不只一種；不靠赦免令撐完八週，就是「全折卡」。</li>
     </ul><div class="btns"><button id="btnClose">知道了</button></div>`);
     $('btnClose').onclick = () => { hideModal(); if (then) then(); };
   }
@@ -1199,6 +1395,8 @@
   }
 
   $('btnEnd').onclick = endDay;
+  $('think').onclick = () => { if (selected != null) { const id = selected; selected = null; think(id); } else flash('把卡牌拖到骷髏上，或先點一張卡牌再點骷髏。'); };
+  $('btnPortrait').onclick = () => document.body.classList.add('portrait-ok');
   $('lnkHelp').onclick = e => { e.preventDefault(); showHelp(); };
   $('lnkShop').onclick = e => { e.preventDefault(); showShop(); };
   $('lnkRestart').onclick = e => { e.preventDefault(); if (confirm('確定要重新開始嗎？')) setupGame(); };
