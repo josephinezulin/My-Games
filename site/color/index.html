@@ -316,8 +316,8 @@
   // Hold anywhere to pick up the brush and drag it. Resting it in a paint tin
   // loads it (the longer, the more, up to a full brush); the water cup washes
   // it. Brushing across the palette well lays paint down: the further you
-  // brush, the more comes off. The well mixes everything by amount, and the
-  // more you stir, the more evenly the colours blend on screen.
+  // brush, the more comes off. The whole well always shows the one true mix
+  // of everything in it; brushing only leaves a fading sheen of strokes.
   const pc = $('paint'), px = pc.getContext('2d');
   const LOAD_RATE = 1.4;     // brush loads per second while resting in a tin
   const DEPOSIT = 1 / 240;   // loads put down per pixel brushed in the well
@@ -353,6 +353,16 @@
     inner.addColorStop(0, '#fbfaf8'); inner.addColorStop(1, '#dcd7d0');
     px.fillStyle = inner;
     px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.fill();
+    const m = mix(well);
+    if (m) {
+      px.save();
+      clipWell(px, g);
+      const wet = px.createRadialGradient(g.cx - g.rx * 0.3, g.cy - g.ry * 0.4, g.rx * 0.1, g.cx, g.cy, g.rx * 1.1);
+      wet.addColorStop(0, shade(m, 1.12)); wet.addColorStop(0.6, css(m)); wet.addColorStop(1, shade(m, 0.88));
+      px.fillStyle = wet;
+      px.fillRect(0, 0, w, h);
+      px.restore();
+    }
     if (layer) px.drawImage(layer, 0, 0, w, h);
     px.strokeStyle = '#cfc9c1'; px.lineWidth = 2;
     px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.stroke();
@@ -415,25 +425,27 @@
       clipWell(lctx, g);
       lctx.lineCap = 'round';
       if (put > 0) {
-        const c = mix(brush);
         for (const k of Object.keys(brush)) {
           const part = put * (brush[k] / load);
           brush[k] -= part;
           well[k] = (well[k] || 0) + part;
           if (brush[k] < 1e-4) delete brush[k];
         }
-        lctx.strokeStyle = css(c);
-        lctx.globalAlpha = 0.9;
-        lctx.lineWidth = 18 + Math.min(1, load) * 10;
-        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left, lastPt.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
       } else if (room <= 0 && load > 0) flash('調色盤滿了，按「清洗調色盤」重來');
-      // Stirring evens the well out toward the true mix.
-      const m = mix(well);
-      if (m) {
-        lctx.globalAlpha = Math.min(0.5, d * 0.004);
-        lctx.globalCompositeOperation = 'source-atop'; // only tint paint that's already down
-        lctx.fillStyle = css(m);
+      // Strokes are only a glossy sheen over the single mixed colour, and
+      // older strokes fade as you keep brushing.
+      if (amount(well)) {
+        lctx.globalCompositeOperation = 'destination-out';
+        lctx.globalAlpha = Math.min(0.3, d * 0.003);
         lctx.fillRect(0, 0, g.w, g.h);
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.globalAlpha = 1;
+        lctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        lctx.lineWidth = 16 + Math.min(1, load) * 10;
+        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left, lastPt.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
+        lctx.strokeStyle = 'rgba(0,0,0,0.10)';
+        lctx.lineWidth = 3;
+        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left + 6, lastPt.y - pr.top + 5); lctx.lineTo(x - pr.left + 6, y - pr.top + 5); lctx.stroke();
       }
       lctx.restore();
       drawPaint();
