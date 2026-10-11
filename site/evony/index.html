@@ -195,12 +195,36 @@
   }
   function float(text, color) { run.floats.push({ text, color, t: 0 }); }
 
+  // Troop-count feedback: the counter tweens toward the real number, pops and
+  // flashes green on gains and red on losses; losses also tint the screen edge
+  // and buzz the phone (throttled so hordes don't vibrate nonstop).
+  let lastBuzz = 0;
+  function feedback(dt) {
+    if (run.shown == null) { run.shown = run.army; run.seen = run.army; run.pulse = 0; run.hurt = 0; }
+    if (run.army !== run.seen) {
+      const up = run.army > run.seen;
+      run.pulse = 1;
+      run.pulseUp = up;
+      if (!up) {
+        run.hurt = Math.min(1, run.hurt + 0.5);
+        const now = performance.now();
+        if (now - lastBuzz > 180 && navigator.vibrate) { lastBuzz = now; try { navigator.vibrate(18); } catch (e) {} }
+      }
+      run.seen = run.army;
+    }
+    run.shown += (run.army - run.shown) * Math.min(1, dt * 9);
+    if (Math.abs(run.army - run.shown) < 0.5) run.shown = run.army;
+    run.pulse = Math.max(0, run.pulse - dt * 3);
+    run.hurt = Math.max(0, run.hurt - dt * 2.5);
+  }
+
   function update(dt) {
     if (!run) return;
     run.t += dt;
     for (const f of run.floats) f.t += dt;
     run.floats = run.floats.filter(f => f.t < 0.9);
     run.bump = Math.max(0, run.bump - dt * 4);
+    feedback(dt);
     run.x += ((run.lane ? 0.5 : -0.5) - run.x) * Math.min(1, dt * 10);
     const g = nextGiant();
     if (run.phase === 'run') {
@@ -437,9 +461,22 @@
     }
     const shake = run.bump ? Math.sin(run.t * 60) * 6 * run.bump : 0;
     soldier(pp[0] + shake, pp[1], 16, '#1e5fd6', '#ffd23f');
-    ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 3;
-    ctx.strokeRect(pp[0] - 34 + shake, pp[1] - 52, 68, 58);
-    text(String(n), pp[0], pp[1] + 22, 22, '#fff', '#1e5fd6');
+    const pulse = run.pulse || 0;
+    const tint = run.pulseUp ? '61,220,132' : '255,90,82';
+    ctx.strokeStyle = pulse ? `rgba(${tint},${0.5 + pulse * 0.5})` : '#ffffffcc';
+    ctx.lineWidth = 3 + pulse * 3;
+    const grow = pulse * 6;
+    ctx.strokeRect(pp[0] - 34 - grow + shake, pp[1] - 52 - grow, 68 + grow * 2, 58 + grow * 2);
+    const shownN = Math.round(run.shown == null ? n : run.shown);
+    text(String(shownN), pp[0], pp[1] + 24, 22 * (1 + pulse * 0.35), '#fff', pulse ? `rgb(${tint})` : '#1e5fd6');
+    // Red edge flash when losing troops
+    if (run.hurt > 0.02) {
+      const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
+      v.addColorStop(0, 'rgba(232,71,63,0)');
+      v.addColorStop(1, `rgba(232,71,63,${run.hurt * 0.45})`);
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, W, H);
+    }
     for (const f of run.floats) {
       ctx.globalAlpha = 1 - f.t;
       text(f.text, pp[0], pp[1] - 70 - f.t * 50, 22, f.color, '#0006');
