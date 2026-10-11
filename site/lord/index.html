@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>html, body, * { touch-action: manipulation; }</style>
+<script>
+  // Fast repeated taps must not zoom the page. iOS Safari ignores
+  // user-scalable=no, so also stop pinch gestures and double-tap zoom here.
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+</script>
 <title>最強領主</title>
 <meta name="description" content="最強領主 網頁版：左右滑動選擇路線，穿過機關壯大軍隊，攻下敵方城堡，招募英雄、養育獅鷲、提升爵位。">
 <style>

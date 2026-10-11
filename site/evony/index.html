@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>html, body, * { touch-action: manipulation; }</style>
+<script>
+  // Fast repeated taps must not zoom the page. iOS Safari ignores
+  // user-scalable=no, so also stop pinch gestures and double-tap zoom here.
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+</script>
 <title>王者之路</title>
 <meta name="description" content="文明霸業風格無盡跑酷：在海上長橋選擇跑道，踩過 +1 階梯、穿過倍增門，一路擊敗擋路的巨人，看你能走多遠。">
 <style>

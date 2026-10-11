@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>html, body, * { touch-action: manipulation; }</style>
+<script>
+  // Fast repeated taps must not zoom the page. iOS Safari ignores
+  // user-scalable=no, so also stop pinch gestures and double-tap zoom here.
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+</script>
 <title>Block Out</title>
 <meta name="description" content="Block Out - 色塊滑出益智遊戲：拖動色塊，從相同顏色的出口滑出棋盤。">
 <style>
