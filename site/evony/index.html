@@ -87,31 +87,53 @@
   const segOf = z => Math.floor((z - 200) / SEG);
 
   // Item sizes scale with A, the army size at the start of the block.
-  function makeSegment(s, A, r) {
+  // Most segments are open: rows of paired items, left and right, that you
+  // weave between. Some segments are walled: the lanes are split for the whole
+  // segment after a short gap, so the choice is a commitment. Every item has a
+  // `unit`: one decision (an open row, or a whole walled segment).
+  function makeSegment(s, A, r, walled) {
     const pick = a => a[Math.floor(r() * a.length)];
     const items = [];
-    const z0 = 200 + s * SEG + GAP;
-    const kinds = ['steps', 'gate', 'horde', 'trick', 'mult'];
-    const a = pick(kinds);
-    let b = pick(kinds);
-    while (b === a) b = pick(kinds);
-    [a, b].forEach((kind, lane) => {
-      if (kind === 'steps') {
-        const k = 10 + Math.floor(r() * 12);
-        for (let i = 0; i < k; i++) items.push({ kind: 'step', lane, z: z0 + 10 + i * STEP });
-      } else if (kind === 'gate') {
-        items.push({ kind: 'gate', lane, z: z0 + 60, op: '+', n: Math.max(5, Math.round(A * (0.2 + r() * 0.4))) });
-      } else if (kind === 'mult') {
-        items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.max(2, Math.round(A * (0.05 + r() * 0.1))) });
-        items.push({ kind: 'gate', lane, z: z0 + 170, op: 'x', n: 2 });
-      } else if (kind === 'horde') {
-        items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.max(3, Math.round(A * (0.15 + r() * 0.25))), len: 120 });
-      } else {
-        // Like the ad: a tempting +3 right before a big horde.
-        items.push({ kind: 'gate', lane, z: z0 + 30, op: '+', n: 3 });
-        items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.max(4, Math.round(A * (0.25 + r() * 0.3))), len: 190 });
-      }
-    });
+    if (walled) {
+      const z0 = 200 + s * SEG + GAP, unit = 'w' + s;
+      const kinds = ['steps', 'gate', 'horde', 'trick', 'mult'];
+      const a = pick(kinds);
+      let b = pick(kinds);
+      while (b === a) b = pick(kinds);
+      [a, b].forEach((kind, lane) => {
+        if (kind === 'steps') {
+          const k = 10 + Math.floor(r() * 12);
+          for (let i = 0; i < k; i++) items.push({ kind: 'step', lane, unit, z: z0 + 10 + i * STEP });
+        } else if (kind === 'gate') {
+          items.push({ kind: 'gate', lane, unit, z: z0 + 60, op: '+', n: Math.max(5, Math.round(A * (0.2 + r() * 0.4))) });
+        } else if (kind === 'mult') {
+          items.push({ kind: 'gate', lane, unit, z: z0 + 40, op: '-', n: Math.max(2, Math.round(A * (0.05 + r() * 0.1))) });
+          items.push({ kind: 'gate', lane, unit, z: z0 + 170, op: 'x', n: 2 });
+        } else if (kind === 'horde') {
+          items.push({ kind: 'horde', lane, unit, z: z0 + 120, n: Math.max(3, Math.round(A * (0.15 + r() * 0.25))), len: 120 });
+        } else {
+          // Like the ad: a tempting +3 right before a big horde.
+          items.push({ kind: 'gate', lane, unit, z: z0 + 30, op: '+', n: 3 });
+          items.push({ kind: 'horde', lane, unit, z: z0 + 110, n: Math.max(4, Math.round(A * (0.25 + r() * 0.3))), len: 190 });
+        }
+      });
+      return items;
+    }
+    const bad = k => k === 'minus' || k === 'horde';
+    for (let i = 0; i < 4; i++) {
+      const z = 200 + s * SEG + 30 + i * 100, unit = s + ':' + i;
+      const kinds = ['steps', 'plus', 'plus', 'minus', 'horde', 'horde', r() < 0.3 ? 'x2' : 'plus'];
+      const a = pick(kinds);
+      let b = pick(kinds);
+      while (b === a || (bad(a) && bad(b))) b = pick(kinds);
+      [a, b].forEach((kind, lane) => {
+        if (kind === 'steps') for (let k = 0; k < 5; k++) items.push({ kind: 'step', lane, unit, z: z + k * STEP });
+        else if (kind === 'plus') items.push({ kind: 'gate', lane, unit, z: z + 30, op: '+', n: Math.max(3, Math.round(A * (0.08 + r() * 0.12))) });
+        else if (kind === 'minus') items.push({ kind: 'gate', lane, unit, z: z + 30, op: '-', n: Math.max(2, Math.round(A * (0.04 + r() * 0.06))) });
+        else if (kind === 'x2') items.push({ kind: 'gate', lane, unit, z: z + 30, op: 'x', n: 2 });
+        else items.push({ kind: 'horde', lane, unit, z: z + 10, n: Math.max(3, Math.round(A * (0.08 + r() * 0.1))), len: 50 });
+      });
+    }
     return items;
   }
 
@@ -119,16 +141,21 @@
     for (let v = 0; ; v++) {
       const r = rng(run.seed + s0 * 7919 + v * 31337);
       const A = Math.max(10, army);
-      const items = [];
-      for (let k = 0; k < BLOCK; k++) items.push(...makeSegment(s0 + k, A, r));
-      const through = (k, lane, n) => items.filter(it => it.lane === lane && segOf(it.z) === s0 + k).sort((x, y) => x.z - y.z)
+      const items = [], walled = [];
+      for (let k = 0; k < BLOCK; k++) {
+        const w = s0 + k > 1 && r() < 0.25;
+        if (w) walled.push(s0 + k);
+        items.push(...makeSegment(s0 + k, A, r, w));
+      }
+      const units = [...new Set(items.map(it => it.unit))];
+      const through = (u, lane, n) => items.filter(it => it.lane === lane && it.unit === u).sort((x, y) => x.z - y.z)
         .reduce((m, it) => (m <= 0 ? m : apply(m, it)), n);
       let best = army, avg = army, ok = true;
-      for (let k = 0; k < BLOCK; k++) {
-        // Neither lane may wipe out an average army, so one wrong pick is never fatal.
-        const a0 = through(k, 0, avg), a1 = through(k, 1, avg);
+      for (const u of units) {
+        // Neither lane may wipe out a typical army, so one wrong pick is never fatal.
+        const a0 = through(u, 0, avg), a1 = through(u, 1, avg);
         if (a0 <= 0 || a1 <= 0) ok = false;
-        best = Math.max(through(k, 0, best), through(k, 1, best));
+        best = Math.max(through(u, 0, best), through(u, 1, best));
         avg = Math.sqrt(Math.max(1, a0) * Math.max(1, a1));
       }
       if ((!ok || best < army * 1.3 + 10) && v < 300) continue;
@@ -136,6 +163,7 @@
       const factor = 0.5 + Math.min(0.25, d * 0.02);
       const n = Math.max(5, Math.round(Math.min(avg * factor, best * 0.6)));
       run.items.push(...items);
+      walled.forEach(w => run.walled.add(w));
       run.giants.push({ z: 200 + gSeg * SEG + 180, n, seg: gSeg, done: false, best, avg: Math.round(avg) });
       run.giantSegs.add(gSeg);
       return;
@@ -150,13 +178,14 @@
 
   function start() {
     run = { seed: (Math.random() * 1e9) | 0, z: 0, army: 10, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
-      items: [], giants: [], giantSegs: new Set(), blocks: 0, beaten: 0, fight: null };
+      items: [], giants: [], giantSegs: new Set(), walled: new Set(), blocks: 0, beaten: 0, fight: null };
     genBlock(0, 10, 0);
     $('box').classList.remove('show');
   }
 
   const isGiantSeg = z => run.giantSegs.has(segOf(z));
-  const inGap = z => z < 200 || (z - 200) % SEG < GAP || isGiantSeg(z);
+  const isWalled = z => run.walled.has(segOf(z));
+  const inGap = z => z < 200 || !isWalled(z) || (z - 200) % SEG < GAP || isGiantSeg(z);
   const nextGiant = () => run.giants.find(g => !g.done);
   const speed = () => Math.min(240, SPEED + run.blocks * 10);
   function switchLane(to) {
@@ -310,7 +339,7 @@
     const drawWall = () => {
       // Center wall with gaps, drawn as an upright face
       for (let s = segOf(far); s >= Math.max(0, segOf(z - CAM_BACK)); s--) {
-        if (run.giantSegs.has(s)) continue;
+        if (!run.walled.has(s)) continue;
         const z0 = Math.max(200 + s * SEG + GAP, z - CAM_BACK + 10), z1 = Math.min(200 + (s + 1) * SEG, far);
         if (z1 <= z0) continue;
         const g0 = proj(0, z0), g1 = proj(0, z1);
@@ -426,7 +455,11 @@
     ctx.fillRect(70, 14, (W - 140) * Math.min(1, Math.max(0, (z - from) / (ng.z - from))), 8);
     text(`${Math.floor(z / 10)} 公尺`, 36, 18, 13, '#fff', '#0006');
     text(`巨人 ${run.beaten}`, W - 36, 18, 13, '#fff', '#0006');
-    if (run.phase === 'run' && inGap(z) && z > 30) text('可以換跑道！', W / 2, 46, 16, '#fff', '#2f8cff');
+    if (run.phase === 'run') {
+      const wallAhead = run.walled.has(segOf(z + 160)) && !isWalled(z);
+      if (isWalled(z) && (z - 200) % SEG < GAP) text('牆來了！最後機會換跑道', W / 2, 46, 16, '#fff', '#e8473f');
+      else if (wallAhead) text('前方有牆，先選好跑道', W / 2, 46, 16, '#fff', '#ff9f1a');
+    }
     if (z < 60) text('點左右或滑動切換跑道', W / 2, 70, 15, '#fff', '#0006');
   }
 
@@ -451,8 +484,8 @@
 
   function showHelp() {
     $('boxCard').innerHTML = `<h2>王者之路</h2><ul class="help">
-      <li>你帶著軍隊沿著海上長橋前進，橋中間有一道牆把路分成兩條跑道。</li>
-      <li>牆只在每段開頭留有缺口，看到「可以換跑道！」時點左右兩側或滑動切換。</li>
+      <li>你帶著軍隊沿著海上長橋前進，橋上有左右兩條跑道。</li>
+      <li>大部分路段可以隨時點左右兩側或滑動切換跑道，左右閃躲敵軍、搶好的門。偶爾會出現一段中間有牆的路，進去之後就只能走到底。</li>
       <li>藍色 +1 階梯一步一兵，綠色門加兵或翻倍，紅色門減兵；紅色敵軍會拚掉你的士兵。</li>
       <li>小心誘人的 +3，後面常常藏著大軍。</li>
       <li>這條路沒有盡頭。每走一段就有巨人擋路，兵力比巨人軍團多才能通過；不必每次都選到最好的路，但選得越好，領先越多。越往前巨人越強、行軍越快。</li>
