@@ -25,11 +25,18 @@
   nav.games a { color: var(--ink); opacity: .6; text-decoration: none; font-weight: 600; }
   nav.games a.on { opacity: 1; text-decoration: underline; }
   header { width: 100%; max-width: 480px; padding: 4px 16px; display: flex; align-items: center; justify-content: space-between; }
-  h1 { margin: 0; font-size: 19px; font-weight: 900; }
+  h1 { margin: 0; font-size: 17px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  header { gap: 8px; }
+  header .row { flex-wrap: nowrap; gap: 4px; }
+  header .row button { padding: 5px 8px !important; font-size: 12px !important; white-space: nowrap; }
   .game { flex: 1; width: 100%; max-width: 480px; display: flex; flex-direction: column; align-items: center; min-height: 0; padding: 0 12px 10px; }
   #target { width: 100%; flex: 1.05; min-height: 0; }
   .palette { position: relative; width: min(86%, 360px); aspect-ratio: 1.45; flex: 0 0 auto; touch-action: none; }
   #paint { width: 100%; height: 100%; display: block; }
+  .meter { width: min(80%, 330px); height: 22px; border-radius: 11px; background: #0001; position: relative; overflow: hidden; margin: 2px 0 6px; }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 11px; transition: width .2s, background .2s; }
+  .meter span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #3a2e28; }
+  .meter.off { display: none; }
   .mixbar { width: min(80%, 330px); height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: #0001; margin-top: 6px; }
   .mixbar i { display: block; height: 100%; transition: width .15s; }
   .info { margin: 8px 0 24px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
@@ -81,11 +88,12 @@
 <body>
 <nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a href="../evony/">王者之路</a><a class="on" href="./">色彩配對</a></nav>
 <header>
-  <h1>色彩配對　<span id="lvlName"></span></h1>
-  <div class="row"><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
+  <h1><span id="lvlName"></span></h1>
+  <div class="row"><button id="btnMeter" style="padding:6px 10px;font-size:13px">提示：開</button><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
 </header>
 <div class="game">
   <canvas id="target"></canvas>
+  <div class="meter" id="meter"><i id="meterFill"></i><span id="meterTxt">相似度 --</span></div>
   <div class="palette" id="palette"><canvas id="paint"></canvas></div>
   <div class="mixbar" id="mixbar"></div>
   <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份　上色 <b id="covTxt">0%</b></div>
@@ -439,6 +447,11 @@
     const t = amount(well);
     $('mixbar').innerHTML = t ? Object.entries(well).filter(([, v]) => v > 0.005).map(([k, v]) => `<i style="width:${(v / t) * 100}%;background:${css(PAINTS[k][1])}"></i>`).join('') : '';
     $('covTxt').textContent = Math.round(coverage * 100) + '%';
+    // Live match meter (like trycolors.com): rises as the mix gets closer.
+    const m = mix(well), pct = m ? similarity(m, target) : 0;
+    $('meterFill').style.width = pct + '%';
+    $('meterFill').style.background = pct >= 90 ? '#3ddc84' : pct >= 60 ? '#ffc93c' : '#ff8a6a';
+    $('meterTxt').textContent = m ? `相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
     $('btnDone').disabled = t < 0.3 || coverage < 0.5;
     $('btnClear').disabled = !t;
   }
@@ -640,6 +653,7 @@
       <li>拖到中間的調色盤來回刷，顏料就會刷上去；刷得越多，顏色混得越均勻。下方色條顯示各色比例。</li>
       <li>筆上還有別的顏色時沾新顏料會混在筆上，可以先到「洗筆水」裡停一下洗乾淨。</li>
       <li>調好後，用筆刷在上方的角色身上塗色，塗滿一半以上就能按「比對顏色」。</li>
+      <li>調色盤上方的「相似度」會即時顯示離目標還有多遠；想挑戰的話，按右上角「提示」把它關掉。</li>
       <li>左上角的卡片是目標顏色。相似度 90% 以上過關，99% 拿三星；沒過關可以繼續調色，角色身上的顏色會跟著改變。</li>
     </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
     $('box').classList.add('show');
@@ -648,6 +662,10 @@
 
   $('btnClear').onclick = () => { well = {}; resetLayer(); drawPaint(); drawTarget(); syncUI(); };
   $('btnDone').onclick = finish;
+  let meterOn = store.get('meter', true);
+  const applyMeter = () => { $('meter').classList.toggle('off', !meterOn); $('btnMeter').textContent = `提示：${meterOn ? '開' : '關'}`; };
+  $('btnMeter').onclick = () => { meterOn = !meterOn; store.set('meter', meterOn); applyMeter(); };
+  applyMeter();
   $('btnLevels').onclick = showLevels;
   $('btnHelp').onclick = showHelp;
   window.addEventListener('resize', () => { resetObject(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
