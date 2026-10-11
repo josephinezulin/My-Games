@@ -230,6 +230,21 @@
     }
   }
 
+  // Gate pass: the panel shatters into shards of its own colour.
+  function shatter(it) {
+    const x0 = it.lane ? 0.08 : -1.02, x1 = it.lane ? 1.02 : -0.08;
+    const p0 = proj(x0, it.z + 20), p1 = proj(x1, it.z + 20);
+    if (!p0 || !p1) return;
+    const w = p1[0] - p0[0], h = w * 0.35;
+    const c = it.op !== '-' ? ['#3ddc84', '#a8f5c8', '#fff'] : ['#ff5a52', '#ffb3ad', '#fff'];
+    run.parts = run.parts || [];
+    for (let i = 0; i < 28; i++) {
+      const x = p0[0] + Math.random() * w, y = p0[1] - Math.random() * h;
+      const vx = (x - (p0[0] + w / 2)) * 3 + (Math.random() - 0.5) * 120;
+      run.parts.push({ x, y, vx, vy: -160 - Math.random() * 220, t: 0, c: c[i % 3], r: 2 + Math.random() * 4 });
+    }
+  }
+
   // Troop-count feedback: the counter tweens toward the real number, pops and
   // flashes green on gains and red on losses; losses also tint the screen edge
   // and buzz the phone (throttled so hordes don't vibrate nonstop).
@@ -290,6 +305,7 @@
         } else if (it.z > before && it.z <= run.z) {
           it.done = true;
           const n = apply(run.army, it);
+          if (it.kind === 'gate') { it.glow = 0; shatter(it); }
           if (it.kind === 'gate') float(`${it.op === 'x' ? 'x' : it.op}${it.n}`, n >= run.army ? '#7cf0a0' : '#ff8a80');
           run.army = n;
         }
@@ -453,6 +469,12 @@
         const p0 = proj(x0, it.z), p1 = proj(x1, it.z);
         if (!p0) continue;
         const h = (p1[0] - p0[0]) * 0.35;
+        if (it.glow != null && it.glow < 0.35) {
+          it.glow += 1 / 60;
+          ctx.globalAlpha = 0.6 * (1 - it.glow / 0.35);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(p0[0] - 6, p0[1] - h - 6, p1[0] - p0[0] + 12, h + 12);
+        }
         ctx.globalAlpha = it.done ? 0.3 : 0.85;
         ctx.fillStyle = good ? '#3ddc84' : '#ff5a52';
         ctx.fillRect(p0[0], p0[1] - h, p1[0] - p0[0], h);
