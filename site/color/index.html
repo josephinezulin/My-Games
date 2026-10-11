@@ -81,6 +81,12 @@
   #levels button.done { background: #ffe3c4; }
   #levels button.cur { outline: 2px solid var(--accent); }
   #levels small { display: block; font-size: 10px; min-height: 12px; color: #c98a00; }
+  .room { background: linear-gradient(180deg, #f3e6d3 0 70%, #d9b98f 70% 100%); border-radius: 14px; padding: 10px 8px 6px; margin: 8px 0 12px; text-align: left; }
+  .room h3 { margin: 0 0 6px; font-size: 15px; }
+  .shelf { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; border-bottom: 8px solid #a8743f; padding-bottom: 4px; margin-bottom: 8px; }
+  .work { text-align: center; font-size: 10px; color: var(--muted); }
+  .work canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .work b { display: block; color: var(--ink); font-size: 11px; }
   .help { text-align: left; color: var(--muted); font-size: 14px; padding-left: 18px; }
   .help li { margin-bottom: 4px; }
 </style>
@@ -89,7 +95,7 @@
 <nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a href="../evony/">王者之路</a><a class="on" href="./">色彩配對</a></nav>
 <header>
   <h1><span id="lvlName"></span></h1>
-  <div class="row"><button id="btnMeter" style="padding:6px 10px;font-size:13px">提示：開</button><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
+  <div class="row"><button id="btnMeter" style="padding:6px 10px;font-size:13px">提示：開</button><button id="btnGallery" style="padding:6px 10px;font-size:13px">展間</button><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
 </header>
 <div class="game">
   <canvas id="target"></canvas>
@@ -234,11 +240,12 @@
   function paintShape(tx, w, h, c, box) {
     const base = css(c), dark = shade(c, 0.72), light = shade(c, 1.35);
     const { cx, cy, S } = box;
+    const shape = box.shape || L.shape;
     const gloss = (x, y, rx, ry, rot = 0) => { tx.fillStyle = '#ffffff55'; tx.beginPath(); tx.ellipse(x, y, rx, ry, rot, 0, 7); tx.fill(); };
     tx.fillStyle = '#0000001a';
     tx.beginPath(); tx.ellipse(cx, cy + S * 0.95, S * 1.1, S * 0.14, 0, 0, 7); tx.fill();
     tx.fillStyle = base;
-    switch (L.shape) {
+    switch (shape) {
       case 'eggplant':
         tx.save(); tx.translate(cx, cy); tx.rotate(-0.12);
         tx.beginPath(); tx.ellipse(-S * 0.35, S * 0.15, S * 0.75, S * 0.6, 0.15, 0, 7); tx.fill();
@@ -280,15 +287,15 @@
         face(tx, cx - S * 0.05, cy + S * 0.05, S * 0.36);
         return;
       case 'grape': case 'blueberry': {
-        const pts = L.shape === 'grape' ? [[0, -0.55], [-0.4, -0.45], [0.4, -0.45], [-0.6, -0.05], [-0.2, -0.05], [0.2, -0.05], [0.6, -0.05], [-0.4, 0.35], [0, 0.35], [0.4, 0.35], [-0.2, 0.72], [0.2, 0.72]]
+        const pts = shape === 'grape' ? [[0, -0.55], [-0.4, -0.45], [0.4, -0.45], [-0.6, -0.05], [-0.2, -0.05], [0.2, -0.05], [0.6, -0.05], [-0.4, 0.35], [0, 0.35], [0.4, 0.35], [-0.2, 0.72], [0.2, 0.72]]
           : [[-0.45, 0.05], [0.45, 0.05], [0, -0.3]];
-        const rr = L.shape === 'grape' ? 0.26 : 0.48;
+        const rr = shape === 'grape' ? 0.26 : 0.48;
         for (const [px, py] of pts) {
           tx.fillStyle = base; tx.beginPath(); tx.arc(cx + px * S, cy + py * S, S * rr, 0, 7); tx.fill();
           tx.strokeStyle = dark; tx.lineWidth = 2; tx.stroke();
           gloss(cx + (px - rr * 0.35) * S, cy + (py - rr * 0.4) * S, S * rr * 0.3, S * rr * 0.18, -0.6);
         }
-        if (L.shape === 'grape') leafAt(tx, cx + S * 0.15, cy - S * 0.8, S * 0.55, 0.9);
+        if (shape === 'grape') leafAt(tx, cx + S * 0.15, cy - S * 0.8, S * 0.55, 0.9);
         face(tx, cx, cy - S * 0.05, S * 0.36);
         return;
       }
@@ -303,17 +310,17 @@
       default: {
         // Round fruit: apple, lemon, orange, strawberry, pepper, pumpkin
         tx.beginPath();
-        if (L.shape === 'lemon') tx.ellipse(cx, cy, S * 0.95, S * 0.7, 0, 0, 7);
-        else if (L.shape === 'strawberry') { tx.moveTo(cx, cy + S * 0.95); tx.bezierCurveTo(cx - S * 1.1, cy + S * 0.1, cx - S * 0.9, cy - S * 0.8, cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 0.9, cy - S * 0.8, cx + S * 1.1, cy + S * 0.1, cx, cy + S * 0.95); }
-        else if (L.shape === 'pumpkin') { tx.ellipse(cx - S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx + S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx, cy, S * 0.55, S * 0.8, 0, 0, 7); }
-        else if (L.shape === 'pepper') { tx.moveTo(cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 1.0, cy - S * 0.8, cx + S * 0.9, cy + S * 0.9, cx + S * 0.2, cy + S * 0.85); tx.quadraticCurveTo(cx, cy + S * 0.7, cx - S * 0.2, cy + S * 0.85); tx.bezierCurveTo(cx - S * 0.9, cy + S * 0.9, cx - S * 1.0, cy - S * 0.8, cx, cy - S * 0.6); }
+        if (shape === 'lemon') tx.ellipse(cx, cy, S * 0.95, S * 0.7, 0, 0, 7);
+        else if (shape === 'strawberry') { tx.moveTo(cx, cy + S * 0.95); tx.bezierCurveTo(cx - S * 1.1, cy + S * 0.1, cx - S * 0.9, cy - S * 0.8, cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 0.9, cy - S * 0.8, cx + S * 1.1, cy + S * 0.1, cx, cy + S * 0.95); }
+        else if (shape === 'pumpkin') { tx.ellipse(cx - S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx + S * 0.45, cy, S * 0.5, S * 0.75, 0, 0, 7); tx.ellipse(cx, cy, S * 0.55, S * 0.8, 0, 0, 7); }
+        else if (shape === 'pepper') { tx.moveTo(cx, cy - S * 0.6); tx.bezierCurveTo(cx + S * 1.0, cy - S * 0.8, cx + S * 0.9, cy + S * 0.9, cx + S * 0.2, cy + S * 0.85); tx.quadraticCurveTo(cx, cy + S * 0.7, cx - S * 0.2, cy + S * 0.85); tx.bezierCurveTo(cx - S * 0.9, cy + S * 0.9, cx - S * 1.0, cy - S * 0.8, cx, cy - S * 0.6); }
         else { tx.arc(cx - S * 0.3, cy, S * 0.72, 0, 7); tx.arc(cx + S * 0.3, cy, S * 0.72, 0, 7); }
         tx.fill();
-        if (L.shape === 'pumpkin') { tx.strokeStyle = dark; tx.lineWidth = 3; for (const k of [-0.25, 0.25]) { tx.beginPath(); tx.ellipse(cx + k * S, cy, S * 0.25, S * 0.78, 0, 0, 7); tx.stroke(); } }
-        if (L.shape === 'strawberry') { tx.fillStyle = '#fff3b0'; for (let i = 0; i < 14; i++) { const a = i * 2.4, d = (i % 4) * 0.18 + 0.15; tx.beginPath(); tx.ellipse(cx + Math.cos(a) * d * S, cy + S * 0.1 + Math.sin(a) * d * S * 0.9, 3, 4.5, 0, 0, 7); tx.fill(); } }
+        if (shape === 'pumpkin') { tx.strokeStyle = dark; tx.lineWidth = 3; for (const k of [-0.25, 0.25]) { tx.beginPath(); tx.ellipse(cx + k * S, cy, S * 0.25, S * 0.78, 0, 0, 7); tx.stroke(); } }
+        if (shape === 'strawberry') { tx.fillStyle = '#fff3b0'; for (let i = 0; i < 14; i++) { const a = i * 2.4, d = (i % 4) * 0.18 + 0.15; tx.beginPath(); tx.ellipse(cx + Math.cos(a) * d * S, cy + S * 0.1 + Math.sin(a) * d * S * 0.9, 3, 4.5, 0, 0, 7); tx.fill(); } }
         gloss(cx - S * 0.45, cy - S * 0.35, S * 0.22, S * 0.12, -0.5);
         tx.fillStyle = '#6d4c2f'; tx.fillRect(cx - 3, cy - S * 0.95, 6, S * 0.3);
-        if (L.shape !== 'lemon') leafAt(tx, cx + S * 0.08, cy - S * 0.7, S * 0.5, 1.0);
+        if (shape !== 'lemon') leafAt(tx, cx + S * 0.08, cy - S * 0.7, S * 0.5, 1.0);
         face(tx, cx, cy + S * 0.05, S * 0.42);
       }
     }
@@ -613,6 +620,11 @@
     if (stars) {
       progress.stars[progress.level] = Math.max(progress.stars[progress.level] || 0, stars);
       store.set('progress', progress);
+      // Keep the best version of each finished work for the gallery.
+      const works = store.get('works', {});
+      const prev = works[progress.level];
+      if (!prev || pct >= prev.pct) works[progress.level] = { c, pct, name: L.name, shape: L.shape };
+      store.set('works', works);
     }
     $('boxCard').innerHTML = `<h2>${stars ? (stars === 3 ? '完美配色！' : '配對成功！') : '還差一點'}</h2>
       <div class="pct" style="color:${stars ? '#2e9e57' : '#e0574a'}">${pct}%</div>
@@ -634,6 +646,35 @@
     if (b1 - b2 > 8) return '偏黃了一點。';
     if (b2 - b1 > 8) return '偏藍了一點。';
     return '很接近了，再微調看看。';
+  }
+
+  // Themed rooms that show off finished works, like Coloring Match's rooms.
+  const ROOMS = [
+    ['水果展間', ['apple', 'lemon', 'orange', 'strawberry', 'grape', 'banana', 'watermelon', 'blueberry']],
+    ['蔬菜展間', ['eggplant', 'pepper', 'carrot', 'pumpkin']],
+    ['甜點與花草展間', ['chocolate', 'blossom', 'leaf']],
+  ];
+  function showGallery() {
+    const works = store.get('works', {});
+    const all = Array.from({ length: LEVELS.length }, (_, i) => ({ i, ...levelAt(i), w: works[i] }));
+    const extra = Object.keys(works).filter(k => +k >= LEVELS.length).length;
+    const done = Object.keys(works).length;
+    $('boxCard').innerHTML = `<h2>我的展間</h2><p>已收藏 ${done} 件作品${extra ? `（含挑戰關 ${extra} 件）` : ''}。每件都是你親手調出的顏色。</p>` +
+      ROOMS.map(([room, shapes]) => {
+        const items = all.filter(x => shapes.includes(x.shape));
+        return `<div class="room"><h3>${room}　${items.filter(x => x.w).length} / ${items.length}</h3><div class="shelf">${items.map(x =>
+          `<div class="work"><canvas data-i="${x.i}"></canvas><b>${x.w ? x.name : '？？？'}</b>${x.w ? x.w.pct + '%' : `第 ${x.i + 1} 關`}</div>`).join('')}</div></div>`;
+      }).join('') + '<button id="bClose">關閉</button>';
+    $('box').classList.add('show');
+    document.querySelectorAll('.work canvas').forEach(cv => {
+      const x = all[+cv.dataset.i], ctx2 = cv.getContext('2d');
+      const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Unfinished works show as a blank silhouette.
+      paintShape(ctx2, r.width, r.height, x.w ? x.w.c : [205, 197, 188], { cx: r.width / 2, cy: r.height / 2, S: r.width * 0.3, shape: x.shape });
+    });
+    $('bClose').onclick = () => $('box').classList.remove('show');
   }
 
   function showLevels() {
@@ -667,6 +708,7 @@
   $('btnMeter').onclick = () => { meterOn = !meterOn; store.set('meter', meterOn); applyMeter(); };
   applyMeter();
   $('btnLevels').onclick = showLevels;
+  $('btnGallery').onclick = showGallery;
   $('btnHelp').onclick = showHelp;
   window.addEventListener('resize', () => { resetObject(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
   window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }) };
