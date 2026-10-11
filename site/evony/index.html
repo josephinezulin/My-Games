@@ -516,12 +516,23 @@
     // Player army
     const pp = proj(run.x, z);
     const n = run.army;
-    const shown = Math.min(n, 40);
-    const rr = rng(7);
-    for (let i = shown - 1; i >= 1; i--) {
-      const back = 4 + Math.floor(i / 5) * 5, side = ((i % 5) - 2) * 0.09 + (rr() - 0.5) * 0.04;
-      const p = proj(run.x + side, z - back);
-      if (p) soldier(p[0], p[1], p[2] * 10, '#2f8cff', '#ffd23f');
+    // The crowd's size tracks the (tweened) troop count, like Count Masters:
+    // one figure per soldier up to 30, then it keeps widening more slowly.
+    // Soldiers sit on a sunflower spiral behind the leader and bob as they run.
+    const cnt = Math.max(0, run.shown == null ? n : run.shown);
+    const shown = Math.round(cnt <= 30 ? cnt : Math.min(90, 30 + Math.log2(cnt / 30) * 14));
+    const crowd = [];
+    for (let i = 1; i < shown; i++) {
+      const a = i * 2.39996, rad = Math.sqrt(i);
+      const lat = Math.max(-0.95 - run.x, Math.min(0.95 - run.x, Math.cos(a) * rad * 0.055));
+      crowd.push({ i, lat, back: 3 + (1 + Math.sin(a)) * rad * 3.1 });
+    }
+    crowd.sort((u, v) => v.back - u.back);
+    for (const c of crowd) {
+      const p = proj(run.x + c.lat, z - c.back);
+      if (!p) continue;
+      const bob = Math.abs(Math.sin(run.t * 14 + c.i * 1.7)) * 2.2 * p[2];
+      soldier(p[0], p[1] - bob, p[2] * 10, '#2f8cff', '#ffd23f');
     }
     const shake = run.bump ? Math.sin(run.t * 60) * 6 * run.bump : 0;
     soldier(pp[0] + shake, pp[1], 16, '#1e5fd6', '#ffd23f');
