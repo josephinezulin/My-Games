@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>王者之路</title>
-<meta name="description" content="文明霸業風格小遊戲：在海上長橋選擇跑道，踩過 +1 階梯、穿過倍增門，帶著大軍擊敗巨人首領。">
+<meta name="description" content="文明霸業風格無盡跑酷：在海上長橋選擇跑道，踩過 +1 階梯、穿過倍增門，一路擊敗擋路的巨人，看你能走多遠。">
 <style>
   :root { --ink: #1d2a3a; --panel: #ffffff; --muted: #6b7a8c; --blue: #2f8cff; --red: #e8473f; --gold: #ffb400; }
   * { box-sizing: border-box; }
@@ -42,8 +42,8 @@
 <body>
 <nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a class="on" href="./">王者之路</a></nav>
 <header>
-  <h1>王者之路　第 <span id="lvl">1</span> 關</h1>
-  <div class="row"><button id="btnLevels">選關</button><button id="btnHelp">說明</button></div>
+  <h1>王者之路</h1>
+  <div class="row" style="align-items:center"><span id="bestTxt" style="font-size:13px;font-weight:700"></span><button id="btnHelp">說明</button></div>
 </header>
 <main><canvas id="cv"></canvas></main>
 
@@ -59,7 +59,7 @@
     get(k, d) { try { const v = localStorage.getItem('evony.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('evony.' + k, JSON.stringify(v)); } catch (e) {} },
   };
-  const LEVELS = 30;
+  const BLOCK = 5; // segments between giants
 
   function rng(seed) {
     let s = seed >>> 0;
@@ -72,88 +72,90 @@
     };
   }
 
-  // A level is a run of segments on a two-lane bridge. A wall splits the
-  // lanes; it opens only for a short gap at the start of each segment, so you
-  // commit to a lane for the whole segment. Items: +1 steps, gates (+N / xN /
-  // -N) and enemy hordes. The giant at the end has as many troops as a share
-  // of the best possible route, so every level can be won.
+  // The bridge never ends. It is built in blocks of segments; a wall splits
+  // the two lanes and opens only for a short gap at the start of each segment,
+  // so each segment is a commitment. Every block ends with a giant whose army
+  // is a share of the best route through that block, starting from the troops
+  // you will actually have, so careful play can always get through. The share
+  // grows and the march speeds up the further you go.
   function apply(n, it) {
     if (it.kind === 'step') return n + 1;
     if (it.kind === 'gate') return it.op === 'x' ? n * it.n : it.op === '+' ? n + it.n : Math.max(0, n - it.n);
     return n - it.n;
   }
-  function buildLevel(L) {
-    for (let v = 0; ; v++) {
-      const lv = gen(L, v);
-      if (lv.ok) return lv;
-    }
-  }
-  function gen(L, v) {
-    const r = rng(4242 + L * 977 + v * 31337);
+  const segOf = z => Math.floor((z - 200) / SEG);
+
+  // Item sizes scale with A, the army size at the start of the block.
+  function makeSegment(s, A, r) {
     const pick = a => a[Math.floor(r() * a.length)];
-    const segs = 4 + Math.min(4, Math.floor(L / 4));
     const items = [];
-    const scale = 1 + L * 0.35;
-    for (let s = 0; s < segs; s++) {
-      const z0 = 200 + s * SEG + GAP;
-      const kinds = ['steps', 'gate', 'horde', 'trick', 'mult'];
-      const a = pick(kinds);
-      let b = pick(kinds);
-      while (b === a) b = pick(kinds);
-      [a, b].forEach((kind, lane) => {
-        const zEnd = z0 + SEG - GAP - 30;
-        if (kind === 'steps') {
-          const k = 10 + Math.floor(r() * 12);
-          for (let i = 0; i < k; i++) items.push({ kind: 'step', lane, z: z0 + 10 + i * STEP });
-        } else if (kind === 'gate') {
-          items.push({ kind: 'gate', lane, z: z0 + 60, op: '+', n: Math.round((5 + r() * 15) * Math.sqrt(scale)) });
-        } else if (kind === 'mult') {
-          items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.round((3 + r() * 6) * Math.sqrt(scale)) });
-          items.push({ kind: 'gate', lane, z: z0 + 170, op: 'x', n: pick([2, 2, 3]) });
-        } else if (kind === 'horde') {
-          items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.round((6 + r() * 14) * scale), len: 120 });
-        } else {
-          // Like the ad: a tempting +3 right before a big horde.
-          items.push({ kind: 'gate', lane, z: z0 + 30, op: '+', n: 3 });
-          items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.round((10 + r() * 16) * scale), len: Math.min(zEnd - z0 - 110, 200) });
-        }
-      });
+    const z0 = 200 + s * SEG + GAP;
+    const kinds = ['steps', 'gate', 'horde', 'trick', 'mult'];
+    const a = pick(kinds);
+    let b = pick(kinds);
+    while (b === a) b = pick(kinds);
+    [a, b].forEach((kind, lane) => {
+      if (kind === 'steps') {
+        const k = 10 + Math.floor(r() * 12);
+        for (let i = 0; i < k; i++) items.push({ kind: 'step', lane, z: z0 + 10 + i * STEP });
+      } else if (kind === 'gate') {
+        items.push({ kind: 'gate', lane, z: z0 + 60, op: '+', n: Math.max(5, Math.round(A * (0.2 + r() * 0.4))) });
+      } else if (kind === 'mult') {
+        items.push({ kind: 'gate', lane, z: z0 + 40, op: '-', n: Math.max(3, Math.round(A * (0.1 + r() * 0.2))) });
+        items.push({ kind: 'gate', lane, z: z0 + 170, op: 'x', n: 2 });
+      } else if (kind === 'horde') {
+        items.push({ kind: 'horde', lane, z: z0 + 120, n: Math.max(6, Math.round(A * (0.3 + r() * 0.5))), len: 120 });
+      } else {
+        // Like the ad: a tempting +3 right before a big horde.
+        items.push({ kind: 'gate', lane, z: z0 + 30, op: '+', n: 3 });
+        items.push({ kind: 'horde', lane, z: z0 + 110, n: Math.max(8, Math.round(A * (0.5 + r() * 0.5))), len: 190 });
+      }
+    });
+    return items;
+  }
+
+  function genBlock(s0, army, d) {
+    for (let v = 0; ; v++) {
+      const r = rng(run.seed + s0 * 7919 + v * 31337);
+      const A = Math.max(10, army);
+      const items = [];
+      for (let k = 0; k < BLOCK; k++) items.push(...makeSegment(s0 + k, A, r));
+      let best = army, ok = true;
+      for (let k = 0; k < BLOCK; k++) {
+        best = Math.max(...[0, 1].map(lane => items.filter(it => it.lane === lane && segOf(it.z) === s0 + k).sort((x, y) => x.z - y.z)
+          .reduce((n, it) => (n <= 0 ? n : apply(n, it)), best)));
+        if (best <= 0) ok = false;
+      }
+      if (!ok || (best < army * 1.3 + 10 && v < 200)) continue;
+      const gSeg = s0 + BLOCK;
+      const factor = 0.6 + Math.min(0.3, d * 0.04);
+      run.items.push(...items);
+      run.giants.push({ z: 200 + gSeg * SEG + 180, n: Math.max(6, Math.round(best * factor)), seg: gSeg, done: false, best });
+      run.giantSegs.add(gSeg);
+      return;
     }
-    const end = 200 + segs * SEG + 60;
-    // Best route: lanes are fixed per segment and every effect is monotone,
-    // so picking the better lane segment by segment is optimal.
-    let best = 5, ok = true;
-    const segOf = z => Math.floor((z - 200) / SEG);
-    for (let s = 0; s < segs; s++) {
-      const res = [0, 1].map(lane => items.filter(it => it.lane === lane && segOf(it.z) === s).sort((x, y) => x.z - y.z)
-        .reduce((n, it) => (n <= 0 ? n : apply(n, it)), best));
-      best = Math.max(...res);
-      if (best <= 0) ok = false;
-    }
-    ok = ok && best >= 12;
-    const factor = 0.55 + Math.min(0.35, L * 0.012);
-    return { L, segs, items, end, best, ok, boss: Math.max(6, Math.round(best * factor)) };
   }
 
   // ---- Run ----
   let run = null, scale = 1, last = 0;
-  let progress = store.get('progress', { level: 0, stars: {} });
+  let record = store.get('best', { dist: 0, giants: 0 });
   window.__evony = () => run;
+  const showBest = () => ($('bestTxt').textContent = record.dist ? `最佳 ${record.dist} 公尺・${record.giants} 巨人` : '');
 
-  function start(L) {
-    progress.level = L;
-    store.set('progress', progress);
-    const lv = buildLevel(L);
-    run = { lv, z: 0, army: 5, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, foes: lv.boss, t: 0 };
-    lv.items.forEach(it => (it.done = false));
-    $('lvl').textContent = L + 1;
+  function start() {
+    run = { seed: (Math.random() * 1e9) | 0, z: 0, army: 5, lane: 0, x: -0.5, phase: 'run', floats: [], bump: 0, t: 0,
+      items: [], giants: [], giantSegs: new Set(), blocks: 0, beaten: 0, fight: null };
+    genBlock(0, 5, 0);
     $('box').classList.remove('show');
   }
 
-  const inGap = z => z < 200 || (z - 200) % SEG < GAP;
+  const isGiantSeg = z => run.giantSegs.has(segOf(z));
+  const inGap = z => z < 200 || (z - 200) % SEG < GAP || isGiantSeg(z);
+  const nextGiant = () => run.giants.find(g => !g.done);
+  const speed = () => Math.min(240, SPEED + run.blocks * 10);
   function switchLane(to) {
     if (!run || run.phase !== 'run' || to === run.lane) return;
-    if (!inGap(run.z) && run.z < run.lv.end - 40) { run.bump = 1; run.floats.push({ text: '牆擋住了', color: '#fff', t: 0 }); return; }
+    if (!inGap(run.z)) { run.bump = 1; run.floats.push({ text: '牆擋住了', color: '#fff', t: 0 }); return; }
     run.lane = to;
   }
   function float(text, color) { run.floats.push({ text, color, t: 0 }); }
@@ -165,10 +167,11 @@
     run.floats = run.floats.filter(f => f.t < 0.9);
     run.bump = Math.max(0, run.bump - dt * 4);
     run.x += ((run.lane ? 0.5 : -0.5) - run.x) * Math.min(1, dt * 10);
+    const g = nextGiant();
     if (run.phase === 'run') {
       const before = run.z;
-      run.z += SPEED * dt;
-      for (const it of run.lv.items) {
+      run.z = Math.min(g.z, run.z + speed() * dt);
+      for (const it of run.items) {
         if (it.done || it.lane !== run.lane) continue;
         if (it.kind === 'horde') {
           // Hordes fight over their length.
@@ -186,34 +189,40 @@
           run.army = n;
         }
       }
-      if (run.army <= 0) { run.army = 0; return finish(false); }
-      if (run.z >= run.lv.end) run.phase = 'boss';
+      run.items = run.items.filter(it => it.z + (it.len || 0) > run.z - 300);
+      if (run.army <= 0) { run.army = 0; return gameOver(); }
+      // Build the next stretch as soon as the giant's segment begins.
+      if (!g.next && segOf(run.z) >= g.seg) { g.next = true; run.blocks++; genBlock(g.seg + 1, Math.max(5, run.army - g.n), run.blocks); }
+      if (run.z >= g.z) { run.phase = 'boss'; g.left = g.n; float('巨人來了！', '#ffd23f'); }
     } else if (run.phase === 'boss') {
-      const k = Math.max(1, Math.ceil(Math.min(run.army, run.foes) * dt * 2.5));
+      const k = Math.max(1, Math.ceil(Math.min(run.army, g.left) * dt * 2.5));
       run.army -= k;
-      run.foes -= k;
-      if (run.foes <= 0 || run.army <= 0) finish(run.foes <= 0 && run.army > 0);
+      g.left -= k;
+      if (run.army <= 0) { run.army = 0; return gameOver(); }
+      if (g.left <= 0) {
+        g.done = true;
+        run.beaten++;
+        run.phase = 'run';
+        float(`擊敗巨人！（${run.beaten}）`, '#ffd23f');
+      }
     }
   }
 
-  function finish(win) {
+  function gameOver() {
     if (run.phase === 'end') return;
     run.phase = 'end';
-    const L = run.lv.L;
-    const stars = win ? (run.army >= run.lv.boss * 0.5 ? 3 : run.army >= run.lv.boss * 0.2 ? 2 : 1) : 0;
-    if (win) {
-      progress.stars[L] = Math.max(progress.stars[L] || 0, stars);
-      progress.level = Math.min(LEVELS - 1, L + 1);
-      store.set('progress', progress);
-    }
+    const dist = Math.floor(run.z / 10);
+    const isBest = dist > record.dist;
+    if (isBest) { record = { dist, giants: run.beaten }; store.set('best', record); }
+    showBest();
+    const g = nextGiant();
     setTimeout(() => {
-      $('boxCard').innerHTML = `<h2>${win ? '擊敗巨人！' : '大軍潰敗'}</h2>
-        ${win ? `<div class="stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>` : ''}
-        <p>${win ? `剩下 ${run.army} 名士兵，巨人軍團 ${run.lv.boss} 人。` : `巨人軍團有 ${run.lv.boss} 人。看清楚兩條跑道再決定，牆只在缺口處能穿越。`}</p>
-        <div class="row"><button id="bAgain">再試一次</button>${win ? `<button class="primary" id="bNext">${L + 1 >= LEVELS ? '回到第 1 關' : '下一關'}</button>` : ''}</div>`;
+      $('boxCard').innerHTML = `<h2>大軍潰敗</h2>
+        <p>你前進了 <b>${dist}</b> 公尺，擊敗 <b>${run.beaten}</b> 個巨人。${isBest ? '<br><b style="color:#ff9f1a">新紀錄！</b>' : `<br>最佳紀錄：${record.dist} 公尺`}</p>
+        <p>${g && run.z >= g.z - 1 ? `擋路的巨人有 ${g.n} 名士兵。` : '別讓敵軍把你的士兵拚光。'}看清楚兩條跑道再決定，牆只在缺口處能穿越。</p>
+        <div class="row"><button class="primary" id="bAgain">再出發</button></div>`;
       $('box').classList.add('show');
-      $('bAgain').onclick = () => start(L);
-      if (win) $('bNext').onclick = () => start((L + 1) % LEVELS);
+      $('bAgain').onclick = start;
     }, 700);
   }
 
@@ -294,8 +303,8 @@
 
     const drawWall = () => {
       // Center wall with gaps, drawn as an upright face
-      const segs = run.lv.segs;
-      for (let s = segs - 1; s >= 0; s--) {
+      for (let s = segOf(far); s >= Math.max(0, segOf(z - CAM_BACK)); s--) {
+        if (run.giantSegs.has(s)) continue;
         const z0 = Math.max(200 + s * SEG + GAP, z - CAM_BACK + 10), z1 = Math.min(200 + (s + 1) * SEG, far);
         if (z1 <= z0) continue;
         const g0 = proj(0, z0), g1 = proj(0, z1);
@@ -317,7 +326,7 @@
 
     // Items, far to near. The lane away from the camera is drawn first so the
     // wall can hide it.
-    const vis = run.lv.items.filter(it => it.z + (it.len || 0) > z - CAM_BACK + 12 && it.z < far).sort((a, b) => b.z - a.z);
+    const vis = run.items.filter(it => it.z + (it.len || 0) > z - CAM_BACK + 12 && it.z < far).sort((a, b) => b.z - a.z);
     const near = run.x > 0 ? 1 : 0;
     const drawItems = list => {
     for (const it of list) {
@@ -360,12 +369,15 @@
     drawWall();
     drawItems(vis.filter(it => it.lane === near));
 
-    // Giant boss at the end
-    const pb = proj(0, run.lv.end + 60);
-    if (pb) {
+    // Giants waiting on the road
+    for (const g of run.giants) {
+      if (g.done || g.z > far + 200) continue;
+      const pb = proj(0, g.z + 60);
+      if (!pb) continue;
+      const foes = g.left == null ? g.n : g.left;
       const s = pb[2] * 200;
-      for (let i = 0; i < Math.min(40, Math.ceil(run.foes / 5)); i++) {
-        const p = proj(-0.9 + (i % 10) * 0.2, run.lv.end + 20 + Math.floor(i / 10) * 12);
+      for (let i = 0; i < Math.min(40, Math.ceil(foes / 5)); i++) {
+        const p = proj(-0.9 + (i % 10) * 0.2, g.z + 20 + Math.floor(i / 10) * 12);
         if (p) soldier(p[0], p[1], Math.max(1.5, p[2] * 8), '#e8473f', '#b92d26');
       }
       ctx.fillStyle = '#c98b6b';
@@ -375,7 +387,7 @@
       ctx.fillRect(pb[0] - s * 0.32, pb[1] - s * 0.3, s * 0.64, s * 0.12);
       ctx.strokeStyle = '#b92d26'; ctx.lineWidth = Math.max(1, s * 0.03);
       ctx.beginPath(); ctx.moveTo(pb[0] - s * 0.1, pb[1] - s * 0.8); ctx.lineTo(pb[0] + s * 0.12, pb[1] - s * 0.55); ctx.stroke();
-      text(`巨人軍團 ${Math.max(0, run.foes)}`, pb[0], pb[1] - s * 1.35, Math.max(10, s * 0.14), '#fff', '#e8473f');
+      text(`巨人軍團 ${Math.max(0, foes)}`, pb[0], pb[1] - s * 1.35, Math.max(10, s * 0.14), '#fff', '#e8473f');
     }
 
     // Player army
@@ -400,10 +412,14 @@
     }
 
     // HUD
+    const ng = nextGiant(), prev = run.giants.filter(x => x.done).pop();
+    const from = prev ? prev.z : 0;
     ctx.fillStyle = '#00000040';
-    ctx.fillRect(40, 14, W - 80, 8);
+    ctx.fillRect(70, 14, W - 140, 8);
     ctx.fillStyle = '#ffd23f';
-    ctx.fillRect(40, 14, (W - 80) * Math.min(1, z / run.lv.end), 8);
+    ctx.fillRect(70, 14, (W - 140) * Math.min(1, Math.max(0, (z - from) / (ng.z - from))), 8);
+    text(`${Math.floor(z / 10)} 公尺`, 36, 18, 13, '#fff', '#0006');
+    text(`巨人 ${run.beaten}`, W - 36, 18, 13, '#fff', '#0006');
     if (run.phase === 'run' && inGap(z) && z > 30) text('可以換跑道！', W / 2, 46, 16, '#fff', '#2f8cff');
     if (z < 60) text('點左右或滑動切換跑道', W / 2, 70, 15, '#fff', '#0006');
   }
@@ -427,30 +443,23 @@
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   }
 
-  function showLevels() {
-    $('boxCard').innerHTML = `<h2>選擇關卡</h2><div id="levels">${Array.from({ length: LEVELS }, (_, i) => {
-      const s = progress.stars[i] || 0;
-      return `<button data-l="${i}" class="${s ? 'done' : ''} ${i === progress.level ? 'cur' : ''}">${i + 1}<small>${'★'.repeat(s)}</small></button>`;
-    }).join('')}</div><button id="bClose">關閉</button>`;
-    $('box').classList.add('show');
-    document.querySelectorAll('[data-l]').forEach(b => (b.onclick = () => start(+b.dataset.l)));
-    $('bClose').onclick = () => { $('box').classList.remove('show'); if (!run) start(progress.level); };
-  }
   function showHelp() {
     $('boxCard').innerHTML = `<h2>王者之路</h2><ul class="help">
       <li>你帶著軍隊沿著海上長橋前進，橋中間有一道牆把路分成兩條跑道。</li>
       <li>牆只在每段開頭留有缺口，看到「可以換跑道！」時點左右兩側或滑動切換。</li>
       <li>藍色 +1 階梯一步一兵，綠色門加兵或翻倍，紅色門減兵；紅色敵軍會拚掉你的士兵。</li>
-      <li>小心誘人的 +3，後面常常藏著大軍。抵達終點後與巨人軍團決戰，兵力多於對方即獲勝。</li>
-    </ul><button class="primary" id="bGo">開始</button>`;
+      <li>小心誘人的 +3，後面常常藏著大軍。</li>
+      <li>這條路沒有盡頭。每走一段就有巨人擋路，兵力比巨人軍團多才能通過；越往前巨人越強、行軍越快。</li>
+      <li>士兵拚光就結束，看你能走多遠。</li>
+    </ul><button class="primary" id="bGo">${run && run.phase !== 'end' ? '繼續' : '出發'}</button>`;
     $('box').classList.add('show');
-    $('bGo').onclick = () => start(progress.level);
+    $('bGo').onclick = () => (run && run.phase !== 'end' ? $('box').classList.remove('show') : start());
   }
 
-  $('btnLevels').onclick = showLevels;
   $('btnHelp').onclick = showHelp;
   window.addEventListener('resize', fit);
   fit();
+  showBest();
   showHelp();
   requestAnimationFrame(frame);
 })();
