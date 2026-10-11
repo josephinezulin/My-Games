@@ -88,11 +88,11 @@
   <canvas id="target"></canvas>
   <div class="palette" id="palette"><canvas id="paint"></canvas></div>
   <div class="mixbar" id="mixbar"></div>
-  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份</div>
+  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份　上色 <b id="covTxt">0%</b></div>
   <div class="buckets" id="buckets"></div>
   <div class="tools">
     <button id="btnClear">清洗調色盤</button>
-    <button class="primary" id="btnDone">完成</button>
+    <button class="primary" id="btnDone">比對顏色</button>
   </div>
 </div>
 <div class="brush" id="brush"><div class="h"></div><div class="f"></div><div class="b"></div><div class="p" id="brushPaint"></div></div>
@@ -222,11 +222,10 @@
     ctx.beginPath(); ctx.ellipse(0, -s * 0.5, s * 0.22, s * 0.5, 0, 0, 7); ctx.fill();
     ctx.restore();
   }
-  function drawTarget() {
-    const [w, h] = fitCanvas(tc, tx);
-    tx.clearRect(0, 0, w, h);
-    const c = target, base = css(c), dark = shade(c, 0.72), light = shade(c, 1.35);
-    const cx = w / 2, cy = h / 2 + 6, S = Math.min(w * 0.36, h * 0.42);
+  // Draws the level's character filled with colour c, centred at box.
+  function paintShape(tx, w, h, c, box) {
+    const base = css(c), dark = shade(c, 0.72), light = shade(c, 1.35);
+    const { cx, cy, S } = box;
     const gloss = (x, y, rx, ry, rot = 0) => { tx.fillStyle = '#ffffff55'; tx.beginPath(); tx.ellipse(x, y, rx, ry, rot, 0, 7); tx.fill(); };
     tx.fillStyle = '#0000001a';
     tx.beginPath(); tx.ellipse(cx, cy + S * 0.95, S * 1.1, S * 0.14, 0, 0, 7); tx.fill();
@@ -312,6 +311,64 @@
     }
   }
 
+  // ---- Painting the character ----
+  // Like the real colour-match games, you mix on the palette and then brush
+  // the mix onto the blank character. The painted area always shows the
+  // palette's current mix; the target colour sits on a small card.
+  let cov = null, covCtx = null, objMask = null, coverage = 0, lastCovCheck = 0;
+  const BLANK = [228, 222, 214];
+  const targetBox = (w, h) => ({ cx: w / 2 + Math.min(w * 0.06, 22), cy: h / 2 + 6, S: Math.min(w * 0.33, h * 0.42) });
+  function offscreen(w, h) {
+    const c = document.createElement('canvas'), dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const x = c.getContext('2d');
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return [c, x];
+  }
+  function resetObject() {
+    const r = tc.getBoundingClientRect();
+    [cov, covCtx] = offscreen(r.width, r.height);
+    const [m, mx] = offscreen(r.width, r.height);
+    paintShape(mx, r.width, r.height, [0, 0, 0], targetBox(r.width, r.height));
+    objMask = m;
+    coverage = 0;
+  }
+  function measureCoverage() {
+    const N = 64, a = document.createElement('canvas');
+    a.width = a.height = N;
+    const ax = a.getContext('2d');
+    ax.drawImage(objMask, 0, 0, N, N);
+    const mask = ax.getImageData(0, 0, N, N).data;
+    ax.clearRect(0, 0, N, N);
+    ax.drawImage(cov, 0, 0, N, N);
+    const paint = ax.getImageData(0, 0, N, N).data;
+    let inside = 0, painted = 0;
+    for (let i = 3; i < mask.length; i += 4) if (mask[i] > 128) { inside++; if (paint[i] > 128) painted++; }
+    coverage = inside ? painted / inside : 0;
+  }
+  function drawTarget() {
+    const [w, h] = fitCanvas(tc, tx);
+    tx.clearRect(0, 0, w, h);
+    const box = targetBox(w, h);
+    paintShape(tx, w, h, BLANK, box);
+    const m = mix(well);
+    if (m && cov) {
+      const [c, cx2] = offscreen(w, h);
+      paintShape(cx2, w, h, m, box);
+      cx2.setTransform(1, 0, 0, 1, 0, 0);
+      cx2.globalCompositeOperation = 'destination-in';
+      cx2.drawImage(cov, 0, 0);
+      tx.drawImage(c, 0, 0, w, h);
+    }
+    // Target card in the corner
+    const cw = Math.min(104, w * 0.27), ch = cw * 1.02, x0 = 8, y0 = 6;
+    tx.fillStyle = '#00000022'; tx.beginPath(); tx.roundRect(x0 + 2, y0 + 4, cw, ch, 12); tx.fill();
+    tx.fillStyle = '#fffaf2'; tx.beginPath(); tx.roundRect(x0, y0, cw, ch, 12); tx.fill();
+    paintShape(tx, w, h, target, { cx: x0 + cw / 2, cy: y0 + ch * 0.48, S: cw * 0.3 });
+    tx.fillStyle = '#3a2e28'; tx.font = '800 12px system-ui, sans-serif'; tx.textAlign = 'center';
+    tx.fillText('目標顏色', x0 + cw / 2, y0 + ch - 8);
+  }
+
   // ---- Brush and palette ----
   // Hold anywhere to pick up the brush and drag it. Resting it in a paint tin
   // loads it (the longer, the more, up to a full brush); the water cup washes
@@ -381,7 +438,8 @@
     $('amountTxt').textContent = amount(well).toFixed(1);
     const t = amount(well);
     $('mixbar').innerHTML = t ? Object.entries(well).filter(([, v]) => v > 0.005).map(([k, v]) => `<i style="width:${(v / t) * 100}%;background:${css(PAINTS[k][1])}"></i>`).join('') : '';
-    $('btnDone').disabled = t < 0.3;
+    $('covTxt').textContent = Math.round(coverage * 100) + '%';
+    $('btnDone').disabled = t < 0.3 || coverage < 0.5;
     $('btnClear').disabled = !t;
   }
 
@@ -414,6 +472,20 @@
     overKey = h ? h.k : null;
     document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
     if (h && h.el) h.el.classList.add('dip');
+    const tr = tc.getBoundingClientRect();
+    if (held && !h && lastPt && x >= tr.left && x <= tr.right && y >= tr.top && y <= tr.bottom) {
+      if (!amount(well)) flash('先在調色盤刷出顏色，再來幫角色上色');
+      else {
+        const box = targetBox(tr.width, tr.height);
+        covCtx.strokeStyle = '#fff';
+        covCtx.lineCap = 'round';
+        covCtx.lineWidth = box.S * 0.38;
+        covCtx.beginPath(); covCtx.moveTo(lastPt.x - tr.left, lastPt.y - tr.top); covCtx.lineTo(x - tr.left, y - tr.top); covCtx.stroke();
+        const now = performance.now();
+        if (now - lastCovCheck > 120) { lastCovCheck = now; measureCoverage(); }
+        drawTarget();
+      }
+    }
     if (held && h && h.k === 'well' && lastPt) {
       const pr = pc.getBoundingClientRect();
       const d = Math.hypot(x - lastPt.x, y - lastPt.y);
@@ -449,6 +521,7 @@
       }
       lctx.restore();
       drawPaint();
+      if (coverage > 0) drawTarget();
     }
     lastPt = { x, y };
     syncUI();
@@ -488,6 +561,7 @@
   });
   document.addEventListener('pointermove', ev => { if (held) brushMove(ev.clientX, ev.clientY); });
   const release = () => {
+    if (held && cov) { measureCoverage(); syncUI(); }
     held = false;
     lastPt = null;
     document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
@@ -510,6 +584,7 @@
     brush = {};
     $('lvlName').textContent = `第 ${i + 1} 關・${L.name}`;
     renderBuckets();
+    resetObject();
     drawTarget();
     resetLayer();
     drawPaint();
@@ -560,21 +635,22 @@
   }
   function showHelp() {
     $('boxCard').innerHTML = `<h2>色彩配對</h2><ul class="help">
-      <li>上方的角色就是目標顏色。</li>
+      <li>左上角卡片是目標顏色，大大的角色等著你上色。</li>
       <li>按住畫面就能拿起畫筆。把筆停在顏料桶裡沾顏料，停越久沾越多（看筆尖和「筆刷 %」）。</li>
       <li>拖到中間的調色盤來回刷，顏料就會刷上去；刷得越多，顏色混得越均勻。下方色條顯示各色比例。</li>
       <li>筆上還有別的顏色時沾新顏料會混在筆上，可以先到「洗筆水」裡停一下洗乾淨。</li>
-      <li>調好後按「完成」，相似度 90% 以上過關，99% 拿三星；沒過關可以繼續刷。</li>
+      <li>調好後，用筆刷在上方的角色身上塗色，塗滿一半以上就能按「比對顏色」。</li>
+      <li>左上角的卡片是目標顏色。相似度 90% 以上過關，99% 拿三星；沒過關可以繼續調色，角色身上的顏色會跟著改變。</li>
     </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
     $('box').classList.add('show');
     $('bGo').onclick = () => { $('box').classList.remove('show'); store.set('seen', true); };
   }
 
-  $('btnClear').onclick = () => { well = {}; resetLayer(); drawPaint(); syncUI(); };
+  $('btnClear').onclick = () => { well = {}; resetLayer(); drawPaint(); drawTarget(); syncUI(); };
   $('btnDone').onclick = finish;
   $('btnLevels').onclick = showLevels;
   $('btnHelp').onclick = showHelp;
-  window.addEventListener('resize', () => { drawTarget(); drawPaint(); restBrush(); });
+  window.addEventListener('resize', () => { resetObject(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
   window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }) };
 
   load(progress.level || 0);
