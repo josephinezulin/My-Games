@@ -1,4 +1,4 @@
-// Level generator for Block Out.
+// Level generator for 色塊脫逃.
 // Places random polyomino blocks on a grid, adds a colored gate per color,
 // and keeps only boards that a BFS solver can clear completely.
 // Usage: node tools/generate-levels.js > site/levels.js

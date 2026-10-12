@@ -10,8 +10,8 @@
   document.addEventListener('gesturestart', e => e.preventDefault());
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 </script>
-<title>色彩配對</title>
-<meta name="description" content="色彩配對：用顏料桶調出和目標一模一樣的顏色。">
+<title>調色師</title>
+<meta name="description" content="調色師：用顏料桶調出和目標一模一樣的顏色。">
 <style>
   :root { --ink: #3a2e28; --muted: #8a7c70; --panel: #fffaf2; --accent: #ff6a3d; --wood: #c98d55; }
   * { box-sizing: border-box; }
@@ -97,7 +97,7 @@
 </style>
 </head>
 <body>
-<nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a href="../evony/">王者之路</a><a class="on" href="./">色彩配對</a></nav>
+<nav class="games"><a href="../">色塊脫逃</a><a href="../sultan/">沙漠王朝</a><a href="../bounce/">落球作戰</a><a href="../lord/">攻城之王</a><a href="../runner/">王者之路</a><a class="on" href="./">調色師</a></nav>
 <header>
   <h1><span id="lvlName"></span></h1>
   <div class="row"><button id="btnMeter" style="padding:6px 10px;font-size:13px">提示：開</button><button id="btnBrushes" style="padding:6px 10px;font-size:13px">畫筆</button><button id="btnGallery" style="padding:6px 10px;font-size:13px">展間</button><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>
@@ -653,7 +653,7 @@
     return '很接近了，再微調看看。';
   }
 
-  // Themed rooms that show off finished works, like Coloring Match's rooms.
+  // Themed rooms that show off finished works, like the rooms in other colouring games.
   const ROOMS = [
     ['水果展間', ['apple', 'lemon', 'orange', 'strawberry', 'grape', 'banana', 'watermelon', 'blueberry']],
     ['蔬菜展間', ['eggplant', 'pepper', 'carrot', 'pumpkin']],
@@ -682,7 +682,7 @@
     $('bClose').onclick = () => $('box').classList.remove('show');
   }
 
-  // Brushes unlock with total stars (Coloring Match lets players unlock new
+  // Brushes unlock with total stars (colouring games commonly let players unlock new
   // brushes; how it unlocks them isn't documented, so stars are our rule).
   const BRUSHES = [
     { name: '紫羅蘭', need: 0, handle: 'linear-gradient(90deg, #7a5cff, #b3a2ff 50%, #6a4ae8)', tip: '#d9c9a8' },
@@ -724,7 +724,7 @@
     $('bClose').onclick = () => $('box').classList.remove('show');
   }
   function showHelp() {
-    $('boxCard').innerHTML = `<h2>色彩配對</h2><ul class="help">
+    $('boxCard').innerHTML = `<h2>調色師</h2><ul class="help">
       <li>左上角卡片是目標顏色，大大的角色等著你上色。</li>
       <li>按住畫面就能拿起畫筆。把筆停在顏料桶裡沾顏料，停越久沾越多（看筆尖和「筆刷 %」）。</li>
       <li>拖到中間的調色盤來回刷，顏料就會刷上去；刷得越多，顏色混得越均勻。下方色條顯示各色比例。</li>

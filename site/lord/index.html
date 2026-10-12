@@ -10,8 +10,8 @@
   document.addEventListener('gesturestart', e => e.preventDefault());
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 </script>
-<title>最強領主</title>
-<meta name="description" content="最強領主 網頁版：左右滑動選擇路線，穿過機關壯大軍隊，攻下敵方城堡，招募英雄、養育獅鷲、提升爵位。">
+<title>攻城之王</title>
+<meta name="description" content="攻城之王 網頁版：左右滑動選擇路線，穿過機關壯大軍隊，攻下敵方城堡，招募英雄、養育獅鷲、提升爵位。">
 <style>
   :root {
     --sky: #8fd3ff;
@@ -72,7 +72,7 @@
 </style>
 </head>
 <body>
-<nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a class="on" href="./">最強領主</a><a href="../evony/">王者之路</a><a href="../color/">色彩配對</a></nav>
+<nav class="games"><a href="../">色塊脫逃</a><a href="../sultan/">沙漠王朝</a><a href="../bounce/">落球作戰</a><a class="on" href="./">攻城之王</a><a href="../runner/">王者之路</a><a href="../color/">調色師</a></nav>
 <header>
   <h1>第 <span id="lvl">1</span> 關</h1>
   <div class="res"><span>金 <b id="gold">0</b></span><span>地契 <b id="deeds">0</b></span></div>
@@ -366,7 +366,7 @@
       ctx.fillStyle = '#3a2a14aa';
       ctx.font = '800 16px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('最強領主', W / 2, H / 2);
+      ctx.fillText('攻城之王', W / 2, H / 2);
       return;
     }
     const sy = run.shake ? (Math.random() - 0.5) * 6 * run.shake : 0;

@@ -47,7 +47,7 @@
 </style>
 </head>
 <body>
-<nav class="games"><a href="../">Block Out</a><a href="../sultan/">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a class="on" href="./">王者之路</a><a href="../color/">色彩配對</a></nav>
+<nav class="games"><a href="../">色塊脫逃</a><a href="../sultan/">沙漠王朝</a><a href="../bounce/">落球作戰</a><a href="../lord/">攻城之王</a><a class="on" href="./">王者之路</a><a href="../color/">調色師</a></nav>
 <header>
   <h1>王者之路</h1>
   <div class="row" style="align-items:center"><span id="bestTxt" style="font-size:13px;font-weight:700"></span><button id="btnHelp">說明</button></div>
@@ -63,8 +63,8 @@
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('evony.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('evony.' + k, JSON.stringify(v)); } catch (e) {} },
+    get(k, d) { try { let v = localStorage.getItem('runner.' + k); if (v == null) v = localStorage.getItem('evony.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('runner.' + k, JSON.stringify(v)); } catch (e) {} },
   };
   const BLOCK = 5; // segments between giants
 
@@ -180,7 +180,7 @@
   // ---- Run ----
   let run = null, scale = 1, last = 0;
   let record = store.get('best', { dist: 0, giants: 0 });
-  window.__evony = () => run;
+  window.__runner = () => run;
   const showBest = () => ($('bestTxt').textContent = record.dist ? `最佳 ${record.dist} 公尺・${record.giants} 巨人` : '');
 
   // Coins carry over between runs and buy a bigger starting army, like

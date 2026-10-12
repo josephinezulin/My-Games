@@ -10,8 +10,8 @@
   document.addEventListener('gesturestart', e => e.preventDefault());
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 </script>
-<title>蘇丹的遊戲</title>
-<meta name="description" content="蘇丹的遊戲 網頁版：把蘇丹卡、人物、金幣與物品放進儀式，七天內完成蘇丹的旨意。">
+<title>沙漠王朝</title>
+<meta name="description" content="沙漠王朝 網頁版：把蘇丹卡、人物、金幣與物品放進儀式，七天內完成蘇丹的旨意。">
 <style>
   :root {
     --desk1: #2b1712;
@@ -279,8 +279,8 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <h1>蘇丹的遊戲</h1>
-    <nav class="games"><a href="../">Block Out</a><a class="on" href="./">蘇丹的遊戲</a><a href="../bounce/">Count and Bounce</a><a href="../lord/">最強領主</a><a href="../evony/">王者之路</a><a href="../color/">色彩配對</a></nav>
+    <h1>沙漠王朝</h1>
+    <nav class="games"><a href="../">色塊脫逃</a><a class="on" href="./">沙漠王朝</a><a href="../bounce/">落球作戰</a><a href="../lord/">攻城之王</a><a href="../runner/">王者之路</a><a href="../color/">調色師</a></nav>
     <div class="hud">
       <div class="chip">第<b id="sDay">1</b> / 56 天</div>
       <div class="chip">金幣<b id="sGold">0</b></div>
@@ -322,7 +322,7 @@
 
 <div class="rotate" id="rotate">
   <div class="phone"></div>
-  <div>蘇丹的遊戲是橫式遊戲<br>請將裝置轉為橫向</div>
+  <div>沙漠王朝是橫式遊戲<br>請將裝置轉為橫向</div>
   <button class="ghost" id="btnPortrait">仍要直式遊玩</button>
 </div>
 
@@ -359,7 +359,7 @@
   ];
   const itemDef = key => ITEMS.find(i => i.key === key);
 
-  // Rites. Slot = [kind, label, required, filter]. A Sultan card slot only
+  // Rites. Slot = [kind, label, required, filter]. A sultan card slot only
   // takes a card of that type, and the rite's target or price must reach the
   // card's rank (a gold Slaughter card needs a gold-rank victim).
   const RITES = {
@@ -818,7 +818,7 @@
       title: '新月之夜', text: '雅斯敏披著斗篷站在密道口，等著你的決定。',
       options: () => [
         { label: '與她一同遠走高飛', cost: 30, run() {
-          ending(true, '遠走高飛', '你們穿過密道，騎上駱駝消失在沙海之中。蘇丹的遊戲，與你再無關係。');
+          ending(true, '遠走高飛', '你們穿過密道，騎上駱駝消失在沙海之中。蘇丹的旨意，與你再無關係。');
         } },
         { label: '讓她留下，成為你的人', run() {
           addFollower(4, '公主', '雅斯敏').stats.charm += 2;

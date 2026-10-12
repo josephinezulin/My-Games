@@ -1,4 +1,4 @@
-// Count and Bounce physics. Shared by the page (site/bounce/index.html) and the
+// 落球作戰 physics. Shared by the page (site/bounce/index.html) and the
 // level generator (tools/generate-bounce.js), so targets are calibrated on the
 // exact same simulation the player sees.
 (function (root) {

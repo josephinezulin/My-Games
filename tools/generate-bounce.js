@@ -1,4 +1,4 @@
-// Level generator for Count and Bounce.
+// Level generator for 落球作戰.
 // Builds each board from a seeded recipe, then simulates pouring every ball
 // from several fixed aim points. The level target is a share of the best
 // result, so every level is beatable with a steady hand.
