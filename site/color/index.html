@@ -11,7 +11,7 @@
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 </script>
 <title>調色師</title>
-<meta name="description" content="調色師：用顏料桶調出和目標一模一樣的顏色。">
+<meta name="description" content="調色師：在調色盤上融合顏料，調出和目標一模一樣的顏色。">
 <style>
   :root { --ink: #3a2e28; --muted: #8a7c70; --panel: #fffaf2; --accent: #ff6a3d; --wood: #c98d55; }
   * { box-sizing: border-box; }
@@ -37,8 +37,7 @@
   .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 11px; transition: width .2s, background .2s; }
   .meter span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #3a2e28; }
   .meter.off { display: none; }
-  .mixbar { width: min(80%, 330px); height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: #0001; margin-top: 6px; }
-  .mixbar i { display: block; height: 100%; transition: width .15s; }
+  button.primary.picking { background: linear-gradient(180deg, #ffd25c, #ffb02a); color: var(--ink); }
   .info { margin: 8px 0 24px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
   .info b { color: var(--ink); }
   .buckets { display: flex; gap: 10px; justify-content: center; width: 100%; }
@@ -106,8 +105,7 @@
   <canvas id="target"></canvas>
   <div class="meter" id="meter"><i id="meterFill"></i><span id="meterTxt">相似度 --</span></div>
   <div class="palette" id="palette"><canvas id="paint"></canvas></div>
-  <div class="mixbar" id="mixbar"></div>
-  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份　上色 <b id="covTxt">0%</b></div>
+  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份</div>
   <div class="buckets" id="buckets"></div>
   <div class="tools">
     <button id="btnClear">清洗調色盤</button>
@@ -331,71 +329,16 @@
     }
   }
 
-  // ---- Painting the character ----
-  // Like the real colour-match games, you mix on the palette and then brush
-  // the mix onto the blank character. The painted area always shows the
-  // palette's current mix; the target colour sits on a small card.
-  let cov = null, covCtx = null, objMask = null, coverage = 0, lastCovCheck = 0;
+  // ---- The character ----
+  // The character waits blank until you pick a colour from the palette; then
+  // it is painted with your pick so you can compare it with the target card.
   const BLANK = [228, 222, 214];
+  let chosen = null;
   const targetBox = (w, h) => ({ cx: w / 2 + Math.min(w * 0.06, 22), cy: h / 2 + 6, S: Math.min(w * 0.33, h * 0.42) });
-  function offscreen(w, h) {
-    const c = document.createElement('canvas'), dpr = window.devicePixelRatio || 1;
-    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
-    const x = c.getContext('2d');
-    x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return [c, x];
-  }
-  let covSize = null;
-  function resetObject(keep) {
-    const r = tc.getBoundingClientRect();
-    const old = keep && cov && covSize;
-    if (old && old.w === r.width && old.h === r.height) return;
-    const prev = cov;
-    [cov, covCtx] = offscreen(r.width, r.height);
-    covSize = { w: r.width, h: r.height };
-    const [m, mx] = offscreen(r.width, r.height);
-    paintShape(mx, r.width, r.height, [0, 0, 0], targetBox(r.width, r.height));
-    objMask = m;
-    coverage = 0;
-    if (old) {
-      // Window resized or zoomed: carry the strokes over to the new layout
-      // instead of wiping the character.
-      const a = targetBox(old.w, old.h), b = targetBox(r.width, r.height), k = b.S / a.S;
-      covCtx.save();
-      covCtx.translate(b.cx - a.cx * k, b.cy - a.cy * k);
-      covCtx.scale(k, k);
-      covCtx.drawImage(prev, 0, 0, old.w, old.h);
-      covCtx.restore();
-      measureCoverage();
-    }
-  }
-  function measureCoverage() {
-    const N = 64, a = document.createElement('canvas');
-    a.width = a.height = N;
-    const ax = a.getContext('2d');
-    ax.drawImage(objMask, 0, 0, N, N);
-    const mask = ax.getImageData(0, 0, N, N).data;
-    ax.clearRect(0, 0, N, N);
-    ax.drawImage(cov, 0, 0, N, N);
-    const paint = ax.getImageData(0, 0, N, N).data;
-    let inside = 0, painted = 0;
-    for (let i = 3; i < mask.length; i += 4) if (mask[i] > 128) { inside++; if (paint[i] > 128) painted++; }
-    coverage = inside ? painted / inside : 0;
-  }
   function drawTarget() {
     const [w, h] = fitCanvas(tc, tx);
     tx.clearRect(0, 0, w, h);
-    const box = targetBox(w, h);
-    paintShape(tx, w, h, BLANK, box);
-    const m = mix(well);
-    if (m && cov) {
-      const [c, cx2] = offscreen(w, h);
-      paintShape(cx2, w, h, m, box);
-      cx2.setTransform(1, 0, 0, 1, 0, 0);
-      cx2.globalCompositeOperation = 'destination-in';
-      cx2.drawImage(cov, 0, 0);
-      tx.drawImage(c, 0, 0, w, h);
-    }
+    paintShape(tx, w, h, chosen || BLANK, targetBox(w, h));
     // Target card in the corner
     const cw = Math.min(104, w * 0.27), ch = cw * 1.02, x0 = 8, y0 = 6;
     tx.fillStyle = '#00000022'; tx.beginPath(); tx.roundRect(x0 + 2, y0 + 4, cw, ch, 12); tx.fill();
@@ -408,19 +351,32 @@
   // ---- Brush and palette ----
   // Hold anywhere to pick up the brush and drag it. Resting it in a paint tin
   // loads it (the longer, the more, up to a full brush); the water cup washes
-  // it. Brushing across the palette well lays paint down: the further you
-  // brush, the more comes off. The whole well always shows the one true mix
-  // of everything in it; brushing only leaves a fading sheen of strokes.
+  // it. The palette well is a grid of wet paint: each cell keeps its own amount
+  // of every pigment, so separate dabs of yellow and purple stay separate.
+  // Brushing lays paint from the brush, picks some up again, and blends the
+  // cells under the bristles, so where two colours meet you can work them into
+  // each other. To answer, tap the spot whose colour you want to submit.
   const pc = $('paint'), px = pc.getContext('2d');
   const LOAD_RATE = 1.4;     // brush loads per second while resting in a tin
-  const DEPOSIT = 1 / 240;   // loads put down per pixel brushed in the well
+  const EXCHANGE = 0.018;    // brush/paint pigment exchange per pixel brushed
+  const BRUSH_CELLS = 40;    // a full brush is as thick as 40 cells of paint
+  const BLEND = 0.03;        // how fast cells under the brush even out, per pixel
   const WELL_CAP = 12;
-  let well = {}, brush = {}, layer, lctx, held = false, tip = null, lastPt = null, overKey = null, rects = [], tilt = 0;
+  const GW = 64, GH = 46;    // paint grid over the well's bounding box
+  const THICK = 0.002;       // paint per cell that looks fully opaque
+  let P = [], grid, brush = {}, layer, lctx, held = false, lastPt = null, overKey = null, rects = [], tilt = 0, picking = false, probe = null;
   const amount = m => Object.values(m).reduce((a, b) => a + b, 0);
+  const wellTotal = () => { let s = 0; if (grid) for (let i = 0; i < grid.length; i++) s += grid[i]; return s; };
 
   function wellGeom() {
     const r = pc.getBoundingClientRect();
     return { w: r.width, h: r.height, cx: r.width / 2, cy: r.height / 2, rx: r.width * 0.36, ry: r.height * 0.36 };
+  }
+  function resetWell() {
+    P = L.paints.slice();
+    grid = new Float32Array(GW * GH * P.length);
+    probe = null;
+    resetLayer();
   }
   function resetLayer() {
     const g = wellGeom(), dpr = window.devicePixelRatio || 1;
@@ -430,12 +386,67 @@
     lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function clipWell(ctx, g) { ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); ctx.clip(); }
+  // Screen point (relative to the palette canvas) to grid coordinates.
+  const toGrid = (g, x, y) => [((x - (g.cx - g.rx)) / (2 * g.rx)) * GW - 0.5, ((y - (g.cy - g.ry)) / (2 * g.ry)) * GH - 0.5];
+  const inWell = (i, j) => { const u = ((i + 0.5) / GW) * 2 - 1, v = ((j + 0.5) / GH) * 2 - 1; return u * u + v * v <= 1; };
+  // Cells under a brush tip at grid point (gx, gy), with a soft falloff.
+  function footprint(g, gx, gy, rPx) {
+    const rx = (rPx / (2 * g.rx)) * GW, ry = (rPx / (2 * g.ry)) * GH, out = [];
+    for (let j = Math.max(0, Math.floor(gy - ry)); j <= Math.min(GH - 1, Math.ceil(gy + ry)); j++)
+      for (let i = Math.max(0, Math.floor(gx - rx)); i <= Math.min(GW - 1, Math.ceil(gx + rx)); i++) {
+        const d = Math.hypot((i - gx) / rx, (j - gy) / ry);
+        if (d <= 1 && inWell(i, j)) out.push([(j * GW + i) * P.length, 1 - d * 0.6]);
+      }
+    return out;
+  }
+  const cellSum = o => { let s = 0; for (let p = 0; p < P.length; p++) s += grid[o + p]; return s; };
+  // The colour of paint at a spot: everything under a small tip, mixed.
+  function sampleAt(g, x, y) {
+    const [gx, gy] = toGrid(g, x, y), drops = {};
+    let tot = 0;
+    for (const [o, w] of footprint(g, gx, gy, 10)) for (let p = 0; p < P.length; p++) { drops[P[p]] = (drops[P[p]] || 0) + grid[o + p] * w; tot += grid[o + p] * w; }
+    return tot > THICK * 0.3 ? mix(drops) : null;
+  }
+  const brushRadius = () => 12 + Math.min(1, amount(brush)) * 4;
 
+  // One dab of the brush at palette point (x, y) after moving d pixels.
+  // Brush and paint trade pigment like a smudge: a loaded brush is "thicker"
+  // than the paint it touches, so it lays paint down; a clean or nearly empty
+  // brush lifts paint and carries it along to the next dab. Paint is conserved.
+  function dab(g, x, y, d) {
+    const [gx, gy] = toGrid(g, x, y);
+    const cells = footprint(g, gx, gy, brushRadius());
+    if (!cells.length) return;
+    const full = wellTotal() >= WELL_CAP;
+    const ex = Math.min(0.5, d * EXCHANGE);
+    for (let p = 0; p < P.length; p++) {
+      const k = P[p];
+      let b = brush[k] || 0;
+      for (const [o, w] of cells) {
+        let t = ex * w * (b / BRUSH_CELLS - grid[o + p]);
+        if (t > 0 && full) t = 0;
+        grid[o + p] += t;
+        b -= t;
+      }
+      if (b > 1e-6) brush[k] = b; else delete brush[k];
+    }
+    // Paint in tins the palette has no slot for (none today) is dropped.
+    for (const k of Object.keys(brush)) if (!P.includes(k)) delete brush[k];
+    if (full && amount(brush) > 0.05) flash('調色盤滿了，按「清洗調色盤」重來');
+    // Even out the cells under the bristles: this is the blending at edges.
+    const a = Math.min(0.5, d * BLEND), avg = new Float32Array(P.length);
+    for (const [o] of cells) for (let p = 0; p < P.length; p++) avg[p] += grid[o + p] / cells.length;
+    for (const [o] of cells) for (let p = 0; p < P.length; p++) grid[o + p] += a * (avg[p] - grid[o + p]);
+  }
+
+  const LOGS = {};
+  for (const [k, [, c]] of Object.entries(PAINTS)) LOGS[k] = c.map(v => Math.log(Math.max(v, 4)));
+  let img = null;
   function drawPaint() {
     const [w, h] = fitCanvas(pc, px);
     const g = wellGeom();
     px.clearRect(0, 0, w, h);
-    // Ceramic palette with a deep mixing well and little side cups
+    // Ceramic palette with a deep mixing well
     px.fillStyle = '#00000022';
     px.beginPath(); px.ellipse(g.cx + 4, g.cy + 10, w * 0.48, h * 0.44, 0, 0, 7); px.fill();
     const dish = px.createLinearGradient(0, 0, 0, h);
@@ -446,23 +457,48 @@
     inner.addColorStop(0, '#fbfaf8'); inner.addColorStop(1, '#dcd7d0');
     px.fillStyle = inner;
     px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.fill();
-    const m = mix(well);
-    if (m) {
+    if (grid) {
+      // Each cell shows its own mix; thin paint is see-through.
+      if (!img) { img = document.createElement('canvas'); img.width = GW; img.height = GH; }
+      const ix = img.getContext('2d'), data = ix.createImageData(GW, GH), d = data.data;
+      for (let c = 0; c < GW * GH; c++) {
+        const o = c * P.length;
+        let tot = 0;
+        for (let p = 0; p < P.length; p++) tot += grid[o + p];
+        if (tot <= 1e-6) continue;
+        let r = 0, gg = 0, b = 0;
+        for (let p = 0; p < P.length; p++) {
+          const f = grid[o + p] / tot, lg = LOGS[P[p]];
+          r += f * lg[0]; gg += f * lg[1]; b += f * lg[2];
+        }
+        d[c * 4] = Math.exp(r); d[c * 4 + 1] = Math.exp(gg); d[c * 4 + 2] = Math.exp(b);
+        d[c * 4 + 3] = Math.min(255, (tot / THICK) * 255);
+      }
+      ix.putImageData(data, 0, 0);
       px.save();
       clipWell(px, g);
-      const wet = px.createRadialGradient(g.cx - g.rx * 0.3, g.cy - g.ry * 0.4, g.rx * 0.1, g.cx, g.cy, g.rx * 1.1);
-      wet.addColorStop(0, shade(m, 1.12)); wet.addColorStop(0.6, css(m)); wet.addColorStop(1, shade(m, 0.88));
-      px.fillStyle = wet;
+      px.imageSmoothingEnabled = true;
+      px.filter = `blur(${((g.rx * 2) / GW) * 0.6}px)`;
+      px.drawImage(img, g.cx - g.rx, g.cy - g.ry, g.rx * 2, g.ry * 2);
+      px.filter = 'none';
+      // Wet gloss over the paint
+      const gloss = px.createRadialGradient(g.cx - g.rx * 0.35, g.cy - g.ry * 0.45, 2, g.cx - g.rx * 0.35, g.cy - g.ry * 0.45, g.rx * 0.7);
+      gloss.addColorStop(0, '#ffffff33'); gloss.addColorStop(1, '#ffffff00');
+      px.fillStyle = gloss;
       px.fillRect(0, 0, w, h);
       px.restore();
     }
     if (layer) px.drawImage(layer, 0, 0, w, h);
     px.strokeStyle = '#cfc9c1'; px.lineWidth = 2;
     px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.stroke();
-    if (!amount(well)) {
+    if (picking) {
+      px.fillStyle = '#3a2e28cc'; px.font = '800 14px system-ui, sans-serif'; px.textAlign = 'center';
+      px.fillText('點一下要送出的顏色', g.cx, g.cy + g.ry + 22);
+    }
+    if (!wellTotal()) {
       px.fillStyle = '#8a7c70aa'; px.font = '700 14px system-ui, sans-serif'; px.textAlign = 'center';
       px.fillText('按住拖曳畫筆：先沾顏料，', g.cx, g.cy - 8);
-      px.fillText('再到這裡來回刷', g.cx, g.cy + 14);
+      px.fillText('再到這裡刷開、互相融合', g.cx, g.cy + 14);
     }
   }
 
@@ -471,17 +507,15 @@
     $('brushPaint').style.height = Math.round(Math.min(1, total) * 40) + 'px';
     $('brushPaint').style.background = c ? css(c) : 'transparent';
     $('loadTxt').textContent = total < 0.02 ? '乾淨' : `${Math.round(total * 100)}%`;
-    $('amountTxt').textContent = amount(well).toFixed(1);
-    const t = amount(well);
-    $('mixbar').innerHTML = t ? Object.entries(well).filter(([, v]) => v > 0.005).map(([k, v]) => `<i style="width:${(v / t) * 100}%;background:${css(PAINTS[k][1])}"></i>`).join('') : '';
-    $('covTxt').textContent = Math.round(coverage * 100) + '%';
-    // Live match meter (like trycolors.com): rises as the mix gets closer.
-    const m = mix(well), pct = m ? similarity(m, target) : 0;
+    const t = wellTotal();
+    $('amountTxt').textContent = t.toFixed(1);
+    // Live match meter: the colour right under the brush tip.
+    const pct = probe ? similarity(probe, target) : 0;
     $('meterFill').style.width = pct + '%';
     $('meterFill').style.background = pct >= 90 ? '#3ddc84' : pct >= 60 ? '#ffc93c' : '#ff8a6a';
-    $('meterTxt').textContent = m ? `相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
-    $('btnDone').disabled = t < 0.3 || coverage < 0.5;
-    $('btnDone').textContent = t < 0.3 ? '先在調色盤調色' : coverage < 0.5 ? `再上色一些（${Math.round(coverage * 100)}%／50%）` : '比對顏色';
+    $('meterTxt').textContent = probe ? `筆尖相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
+    $('btnDone').disabled = t < 0.05;
+    $('btnDone').classList.toggle('picking', picking);
     $('btnClear').disabled = !t;
   }
 
@@ -514,57 +548,28 @@
     overKey = h ? h.k : null;
     document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
     if (h && h.el) h.el.classList.add('dip');
-    const tr = tc.getBoundingClientRect();
-    if (held && !h && x >= tr.left && x <= tr.right && y >= tr.top && y <= tr.bottom) {
-      if (!amount(well)) flash('先在調色盤刷出顏色，再來幫角色上色');
-      else {
-        const box = targetBox(tr.width, tr.height);
-        covCtx.strokeStyle = '#fff';
-        covCtx.lineCap = 'round';
-        covCtx.lineWidth = box.S * 0.38;
-        const from = lastPt || { x, y };
-        covCtx.beginPath(); covCtx.moveTo(from.x - tr.left, from.y - tr.top); covCtx.lineTo(x - tr.left, y - tr.top); covCtx.stroke();
-        const now = performance.now();
-        if (now - lastCovCheck > 120) { lastCovCheck = now; measureCoverage(); }
-        drawTarget();
-      }
-    }
-    if (held && h && h.k === 'well' && lastPt) {
-      const pr = pc.getBoundingClientRect();
-      const d = Math.hypot(x - lastPt.x, y - lastPt.y);
-      const g = wellGeom();
-      const load = amount(brush);
-      const room = WELL_CAP - amount(well);
-      const put = Math.min(load, d * DEPOSIT, Math.max(0, room));
+    if (held && h && h.k === 'well') {
+      const pr = pc.getBoundingClientRect(), g = wellGeom();
+      const from = lastPt || { x, y };
+      const d = Math.hypot(x - from.x, y - from.y);
+      // Dab every few pixels so fast strokes stay continuous.
+      const n = Math.max(1, Math.ceil(d / 4));
+      for (let s = 1; s <= n; s++) dab(g, from.x + ((x - from.x) * s) / n - pr.left, from.y + ((y - from.y) * s) / n - pr.top, lastPt ? d / n : 2);
+      // A faint wet sheen follows the bristles and fades as you keep brushing.
       lctx.save();
       clipWell(lctx, g);
       lctx.lineCap = 'round';
-      if (put > 0) {
-        for (const k of Object.keys(brush)) {
-          const part = put * (brush[k] / load);
-          brush[k] -= part;
-          well[k] = (well[k] || 0) + part;
-          if (brush[k] < 1e-4) delete brush[k];
-        }
-      } else if (room <= 0 && load > 0) flash('調色盤滿了，按「清洗調色盤」重來');
-      // Strokes are only a glossy sheen over the single mixed colour, and
-      // older strokes fade as you keep brushing.
-      if (amount(well)) {
-        lctx.globalCompositeOperation = 'destination-out';
-        lctx.globalAlpha = Math.min(0.3, d * 0.003);
-        lctx.fillRect(0, 0, g.w, g.h);
-        lctx.globalCompositeOperation = 'source-over';
-        lctx.globalAlpha = 1;
-        lctx.strokeStyle = 'rgba(255,255,255,0.22)';
-        lctx.lineWidth = 16 + Math.min(1, load) * 10;
-        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left, lastPt.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
-        lctx.strokeStyle = 'rgba(0,0,0,0.10)';
-        lctx.lineWidth = 3;
-        lctx.beginPath(); lctx.moveTo(lastPt.x - pr.left + 6, lastPt.y - pr.top + 5); lctx.lineTo(x - pr.left + 6, y - pr.top + 5); lctx.stroke();
-      }
+      lctx.globalCompositeOperation = 'destination-out';
+      lctx.globalAlpha = Math.min(0.3, d * 0.003);
+      lctx.fillRect(0, 0, g.w, g.h);
+      lctx.globalCompositeOperation = 'source-over';
+      lctx.globalAlpha = 1;
+      lctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      lctx.lineWidth = brushRadius() * 1.4;
+      lctx.beginPath(); lctx.moveTo(from.x - pr.left, from.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
       lctx.restore();
+      probe = sampleAt(g, x - pr.left, y - pr.top);
       drawPaint();
-      if (coverage > 0) drawTarget();
     }
     lastPt = { x, y };
     syncUI();
@@ -597,6 +602,15 @@
 
   document.addEventListener('pointerdown', ev => {
     if (ev.target.closest('button, .overlay, nav, header')) return;
+    if (picking) {
+      // Eyedropper: tap the spot whose colour you want to submit.
+      picking = false;
+      const pr = pc.getBoundingClientRect(), g = wellGeom(), x = ev.clientX - pr.left, y = ev.clientY - pr.top;
+      const dx = (x - g.cx) / g.rx, dy = (y - g.cy) / g.ry, c = dx * dx + dy * dy <= 1 ? sampleAt(g, x, y) : null;
+      drawPaint(); syncUI();
+      if (c) finish(c); else flash('那裡沒有顏料，再按一次「比對顏色」');
+      return;
+    }
     held = true;
     measure();
     lastPt = null;
@@ -604,7 +618,6 @@
   });
   document.addEventListener('pointermove', ev => { if (held) brushMove(ev.clientX, ev.clientY); });
   const release = () => {
-    if (held && cov) { measureCoverage(); syncUI(); }
     held = false;
     lastPt = null;
     document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
@@ -623,21 +636,22 @@
     store.set('progress', progress);
     L = levelAt(i);
     target = mix(L.recipe);
-    well = {};
     brush = {};
+    chosen = null;
+    picking = false;
     $('lvlName').textContent = `第 ${i + 1} 關・${L.name}`;
     renderBuckets();
-    resetObject();
+    resetWell();
     drawTarget();
-    resetLayer();
     drawPaint();
     syncUI();
     restBrush();
     $('box').classList.remove('show');
   }
 
-  function finish() {
-    const c = mix(well);
+  function finish(c) {
+    chosen = c;
+    drawTarget();
     const pct = similarity(c, target);
     const stars = pct >= 99 ? 3 : pct >= 95 ? 2 : pct >= PASS ? 1 : 0;
     if (stars) {
@@ -743,20 +757,20 @@
   }
   function showHelp() {
     $('boxCard').innerHTML = `<h2>調色師</h2><ul class="help">
-      <li>左上角卡片是目標顏色，大大的角色等著你上色。</li>
+      <li>左上角卡片是目標顏色，你要在調色盤上調出它。</li>
       <li>按住畫面就能拿起畫筆。把筆停在顏料桶裡沾顏料，停越久沾越多（看筆尖和「筆刷 %」）。</li>
-      <li>拖到中間的調色盤來回刷，顏料就會刷上去；刷得越多，顏色混得越均勻。下方色條顯示各色比例。</li>
+      <li>拖到調色盤上刷，顏料會留在你刷過的地方，不同顏色可以分開放好幾團。</li>
+      <li>在兩團顏色的交界來回刷，就能把它們推開、融合；乾淨的筆也能把顏料帶到別處。</li>
       <li>筆上還有別的顏色時沾新顏料會混在筆上，可以先到「洗筆水」裡停一下洗乾淨。</li>
-      <li>調好後，用筆刷在上方的角色身上塗色，塗滿一半以上就能按「比對顏色」。</li>
-      <li>調色盤上方的「相似度」會即時顯示離目標還有多遠；想挑戰的話，按右上角「提示」把它關掉。</li>
-      <li>左上角的卡片是目標顏色。相似度 90% 以上過關，99% 拿三星；沒過關可以繼續調色，角色身上的顏色會跟著改變。</li>
+      <li>「相似度」顯示筆尖下那塊顏色離目標多遠；想挑戰的話，按右上角「提示」把它關掉。</li>
+      <li>調好後按「比對顏色」，再點調色盤上要送出的那一塊。90% 以上過關，99% 拿三星，角色會塗上你選的顏色。</li>
     </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
     $('box').classList.add('show');
     $('bGo').onclick = () => { $('box').classList.remove('show'); store.set('seen', true); };
   }
 
-  $('btnClear').onclick = () => { well = {}; resetLayer(); drawPaint(); drawTarget(); syncUI(); };
-  $('btnDone').onclick = finish;
+  $('btnClear').onclick = () => { resetWell(); picking = false; drawPaint(); syncUI(); };
+  $('btnDone').onclick = () => { picking = !picking; drawPaint(); syncUI(); };
   let meterOn = store.get('meter', true);
   const applyMeter = () => { $('meter').classList.toggle('off', !meterOn); $('btnMeter').textContent = `提示：${meterOn ? '開' : '關'}`; };
   $('btnMeter').onclick = () => { meterOn = !meterOn; store.set('meter', meterOn); applyMeter(); };
@@ -766,8 +780,8 @@
   $('btnBrushes').onclick = showBrushes;
   applyBrush();
   $('btnHelp').onclick = showHelp;
-  window.addEventListener('resize', () => { resetObject(true); drawTarget(); drawPaint(); restBrush(); syncUI(); });
-  window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }) };
+  window.addEventListener('resize', () => { resetLayer(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
+  window.__color = { mix, similarity, levelAt, state: () => ({ grid, P, brush, target, L, chosen }), sampleAt: (x, y) => { const pr = pc.getBoundingClientRect(); return sampleAt(wellGeom(), x - pr.left, y - pr.top); } };
 
   load(progress.level || 0);
   requestAnimationFrame(tick);
