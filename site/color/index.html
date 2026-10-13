@@ -345,13 +345,29 @@
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
     return [c, x];
   }
-  function resetObject() {
+  let covSize = null;
+  function resetObject(keep) {
     const r = tc.getBoundingClientRect();
+    const old = keep && cov && covSize;
+    if (old && old.w === r.width && old.h === r.height) return;
+    const prev = cov;
     [cov, covCtx] = offscreen(r.width, r.height);
+    covSize = { w: r.width, h: r.height };
     const [m, mx] = offscreen(r.width, r.height);
     paintShape(mx, r.width, r.height, [0, 0, 0], targetBox(r.width, r.height));
     objMask = m;
     coverage = 0;
+    if (old) {
+      // Window resized or zoomed: carry the strokes over to the new layout
+      // instead of wiping the character.
+      const a = targetBox(old.w, old.h), b = targetBox(r.width, r.height), k = b.S / a.S;
+      covCtx.save();
+      covCtx.translate(b.cx - a.cx * k, b.cy - a.cy * k);
+      covCtx.scale(k, k);
+      covCtx.drawImage(prev, 0, 0, old.w, old.h);
+      covCtx.restore();
+      measureCoverage();
+    }
   }
   function measureCoverage() {
     const N = 64, a = document.createElement('canvas');
@@ -465,6 +481,7 @@
     $('meterFill').style.background = pct >= 90 ? '#3ddc84' : pct >= 60 ? '#ffc93c' : '#ff8a6a';
     $('meterTxt').textContent = m ? `相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
     $('btnDone').disabled = t < 0.3 || coverage < 0.5;
+    $('btnDone').textContent = t < 0.3 ? '先在調色盤調色' : coverage < 0.5 ? `再上色一些（${Math.round(coverage * 100)}%／50%）` : '比對顏色';
     $('btnClear').disabled = !t;
   }
 
@@ -498,14 +515,15 @@
     document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
     if (h && h.el) h.el.classList.add('dip');
     const tr = tc.getBoundingClientRect();
-    if (held && !h && lastPt && x >= tr.left && x <= tr.right && y >= tr.top && y <= tr.bottom) {
+    if (held && !h && x >= tr.left && x <= tr.right && y >= tr.top && y <= tr.bottom) {
       if (!amount(well)) flash('先在調色盤刷出顏色，再來幫角色上色');
       else {
         const box = targetBox(tr.width, tr.height);
         covCtx.strokeStyle = '#fff';
         covCtx.lineCap = 'round';
         covCtx.lineWidth = box.S * 0.38;
-        covCtx.beginPath(); covCtx.moveTo(lastPt.x - tr.left, lastPt.y - tr.top); covCtx.lineTo(x - tr.left, y - tr.top); covCtx.stroke();
+        const from = lastPt || { x, y };
+        covCtx.beginPath(); covCtx.moveTo(from.x - tr.left, from.y - tr.top); covCtx.lineTo(x - tr.left, y - tr.top); covCtx.stroke();
         const now = performance.now();
         if (now - lastCovCheck > 120) { lastCovCheck = now; measureCoverage(); }
         drawTarget();
@@ -748,7 +766,7 @@
   $('btnBrushes').onclick = showBrushes;
   applyBrush();
   $('btnHelp').onclick = showHelp;
-  window.addEventListener('resize', () => { resetObject(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
+  window.addEventListener('resize', () => { resetObject(true); drawTarget(); drawPaint(); restBrush(); syncUI(); });
   window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }) };
 
   load(progress.level || 0);
