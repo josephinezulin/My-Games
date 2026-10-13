@@ -11,7 +11,7 @@
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 </script>
 <title>調色師</title>
-<meta name="description" content="調色師：在調色盤上融合顏料，調出和目標一模一樣的顏色。">
+<meta name="description" content="調色師：在木製調色盤上混合顏料，調出和目標一模一樣的顏色。">
 <style>
   :root { --ink: #3a2e28; --muted: #8a7c70; --panel: #fffaf2; --accent: #ff6a3d; --wood: #c98d55; }
   * { box-sizing: border-box; }
@@ -30,28 +30,15 @@
   header .row { flex-wrap: nowrap; gap: 4px; }
   header .row button { padding: 5px 8px !important; font-size: 12px !important; white-space: nowrap; }
   .game { flex: 1; width: 100%; max-width: 480px; display: flex; flex-direction: column; align-items: center; min-height: 0; padding: 0 12px 10px; }
-  #target { width: 100%; flex: 1.05; min-height: 0; }
-  .palette { position: relative; width: min(86%, 360px); aspect-ratio: 1.45; flex: 0 0 auto; touch-action: none; }
+  #target { width: 100%; flex: 1; min-height: 0; }
+  .palette { position: relative; width: min(100%, 440px); aspect-ratio: 1.35; flex: 0 0 auto; touch-action: none; }
+  .hint { height: 20px; font-size: 13px; font-weight: 700; color: var(--muted); opacity: 0; transition: opacity .2s; }
+  .hint.on { opacity: 1; }
   #paint { width: 100%; height: 100%; display: block; }
   .meter { width: min(80%, 330px); height: 22px; border-radius: 11px; background: #0001; position: relative; overflow: hidden; margin: 2px 0 6px; }
   .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 11px; transition: width .2s, background .2s; }
   .meter span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #3a2e28; }
   .meter.off { display: none; }
-  button.primary.picking { background: linear-gradient(180deg, #ffd25c, #ffb02a); color: var(--ink); }
-  .info { margin: 8px 0 24px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
-  .info b { color: var(--ink); }
-  .buckets { display: flex; gap: 10px; justify-content: center; width: 100%; }
-  .bucket { position: relative; flex: 1; max-width: 96px; transition: transform .1s; -webkit-tap-highlight-color: transparent; }
-  .bucket.dip { transform: translateY(3px) scale(.97); }
-  .bucket.water .top i { background: radial-gradient(circle at 40% 35%, #e6f6ff, #9fd3ef); }
-  .bucket.water .tin { background: linear-gradient(90deg, #cfe9f7aa, #f2fbffcc 40%, #b7dbefaa); }
-  .bucket .tin { height: 76px; border-radius: 10px 10px 16px 16px; background: linear-gradient(90deg, #cfd2d6, #f4f5f6 40%, #babfc4); position: relative; box-shadow: 0 6px 12px #0003; }
-  .bucket .top { position: absolute; left: 0; right: 0; top: -14px; height: 30px; border-radius: 50%; background: #e9ebee; display: flex; align-items: center; justify-content: center; }
-  .bucket .top i { width: 88%; height: 76%; border-radius: 50%; display: block; box-shadow: inset 0 3px 6px #0004; }
-  .bucket .label { position: absolute; left: 18%; right: 18%; top: 28px; height: 28px; border-radius: 4px; border: 3px solid #fff8; }
-  .bucket .name { text-align: center; font-size: 13px; font-weight: 700; margin-top: 6px; }
-  .bucket .cnt { position: absolute; top: -22px; right: -4px; min-width: 24px; height: 24px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 800; display: none; align-items: center; justify-content: center; padding: 0 6px; z-index: 2; }
-  .bucket .cnt.on { display: flex; }
   .tools { display: flex; gap: 8px; margin-top: 12px; width: 100%; justify-content: center; }
   button { font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 14px; padding: 11px 16px; background: #fff; color: var(--ink); box-shadow: 0 3px 0 #0002; cursor: pointer; }
   button.primary { background: linear-gradient(180deg, #ff8a5c, #ff5a2a); color: #fff; flex: 1; max-width: 200px; }
@@ -105,10 +92,9 @@
   <canvas id="target"></canvas>
   <div class="meter" id="meter"><i id="meterFill"></i><span id="meterTxt">相似度 --</span></div>
   <div class="palette" id="palette"><canvas id="paint"></canvas></div>
-  <div class="info" id="info">筆刷 <b id="loadTxt">乾淨</b>　調色盤 <b id="amountTxt">0</b> 份</div>
-  <div class="buckets" id="buckets"></div>
+  <div class="hint" id="hint"></div>
   <div class="tools">
-    <button id="btnClear">清洗調色盤</button>
+    <button id="btnClear">清空</button>
     <button class="primary" id="btnDone">比對顏色</button>
   </div>
 </div>
@@ -330,15 +316,14 @@
   }
 
   // ---- The character ----
-  // The character waits blank until you pick a colour from the palette; then
-  // it is painted with your pick so you can compare it with the target card.
+  // The character always wears the palette's current mix, so you can compare
+  // it with the target card while you mix.
   const BLANK = [228, 222, 214];
-  let chosen = null;
-  const targetBox = (w, h) => ({ cx: w / 2 + Math.min(w * 0.06, 22), cy: h / 2 + 6, S: Math.min(w * 0.33, h * 0.42) });
+  const targetBox = (w, h) => ({ cx: w / 2 + Math.min(w * 0.06, 22), cy: h / 2 + 4, S: Math.min(w * 0.3, h * 0.4) });
   function drawTarget() {
     const [w, h] = fitCanvas(tc, tx);
     tx.clearRect(0, 0, w, h);
-    paintShape(tx, w, h, chosen || BLANK, targetBox(w, h));
+    paintShape(tx, w, h, mix(well) || BLANK, targetBox(w, h));
     // Target card in the corner
     const cw = Math.min(104, w * 0.27), ch = cw * 1.02, x0 = 8, y0 = 6;
     tx.fillStyle = '#00000022'; tx.beginPath(); tx.roundRect(x0 + 2, y0 + 4, cw, ch, 12); tx.fill();
@@ -348,287 +333,178 @@
     tx.fillText('目標顏色', x0 + cw / 2, y0 + ch - 8);
   }
 
-  // ---- Brush and palette ----
-  // Hold anywhere to pick up the brush and drag it. Resting it in a paint tin
-  // loads it (the longer, the more, up to a full brush); the water cup washes
-  // it. The palette well is a grid of wet paint: each cell keeps its own amount
-  // of every pigment, so separate dabs of yellow and purple stay separate.
-  // Brushing lays paint from the brush, picks some up again, and blends the
-  // cells under the bristles, so where two colours meet you can work them into
-  // each other. To answer, tap the spot whose colour you want to submit.
+  // ---- Brush and wooden palette ----
+  // Paint blobs sit around the rim of a wooden artist's palette. Hold anywhere
+  // to pick up the brush; touching a blob loads the brush with that one colour
+  // (it replaces whatever was on it). Holding the loaded brush in the mixing
+  // area in the middle adds that colour for as long as it stays there, and the
+  // whole mixing area always shows the one mix of everything added.
   const pc = $('paint'), px = pc.getContext('2d');
-  const LOAD_RATE = 1.4;     // brush loads per second while resting in a tin
-  const EXCHANGE = 0.018;    // brush/paint pigment exchange per pixel brushed
-  const BRUSH_CELLS = 40;    // a full brush is as thick as 40 cells of paint
-  const BLEND = 0.03;        // how fast cells under the brush even out, per pixel
+  const RATE = 1.2;          // parts of paint added per second in the mixing area
   const WELL_CAP = 12;
-  const GW = 64, GH = 46;    // paint grid over the well's bounding box
-  const THICK = 0.002;       // paint per cell that looks fully opaque
-  let P = [], grid, brush = {}, layer, lctx, held = false, lastPt = null, overKey = null, rects = [], tilt = 0, picking = false, probe = null;
+  let well = {}, brush = null, held = false, overKey = null, lastPt = null, tilt = 0, ripples = [], stir = 0;
   const amount = m => Object.values(m).reduce((a, b) => a + b, 0);
-  const wellTotal = () => { let s = 0; if (grid) for (let i = 0; i < grid.length; i++) s += grid[i]; return s; };
 
-  function wellGeom() {
-    const r = pc.getBoundingClientRect();
-    return { w: r.width, h: r.height, cx: r.width / 2, cy: r.height / 2, rx: r.width * 0.36, ry: r.height * 0.36 };
+  // Palette layout in canvas pixels: the board, its thumb hole and notch,
+  // the paint blobs round the rim, and the mixing area in the middle.
+  function geo() {
+    const r = pc.getBoundingClientRect(), w = r.width, h = r.height;
+    const cx = w / 2, cy = h / 2, RX = w * 0.47, RY = h * 0.45, n = L.paints.length;
+    const br = Math.min(RX, RY) * 0.17;
+    const blobs = L.paints.map((k, i) => {
+      const a = ((195 - (165 * i) / Math.max(1, n - 1)) * Math.PI) / 180;
+      return { k, x: cx + Math.cos(a) * RX * 0.76, y: cy - Math.sin(a) * RY * 0.74, r: br };
+    });
+    return {
+      w, h, cx, cy, RX, RY, blobs, left: r.left, top: r.top,
+      hole: { x: cx + RX * 0.52, y: cy + RY * 0.45, rx: RY * 0.2, ry: RY * 0.15 },
+      notch: { x: cx + RX * 1.02, y: cy + RY * 0.08, r: RY * 0.3 },
+      mixA: { x: cx - RX * 0.1, y: cy + RY * 0.14, rx: RX * 0.4, ry: RY * 0.38 },
+    };
   }
-  function resetWell() {
-    P = L.paints.slice();
-    grid = new Float32Array(GW * GH * P.length);
-    probe = null;
-    resetLayer();
-  }
-  function resetLayer() {
-    const g = wellGeom(), dpr = window.devicePixelRatio || 1;
-    layer = document.createElement('canvas');
-    layer.width = Math.round(g.w * dpr); layer.height = Math.round(g.h * dpr);
-    lctx = layer.getContext('2d');
-    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  function clipWell(ctx, g) { ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); ctx.clip(); }
-  // Screen point (relative to the palette canvas) to grid coordinates.
-  const toGrid = (g, x, y) => [((x - (g.cx - g.rx)) / (2 * g.rx)) * GW - 0.5, ((y - (g.cy - g.ry)) / (2 * g.ry)) * GH - 0.5];
-  const inWell = (i, j) => { const u = ((i + 0.5) / GW) * 2 - 1, v = ((j + 0.5) / GH) * 2 - 1; return u * u + v * v <= 1; };
-  // Cells under a brush tip at grid point (gx, gy), with a soft falloff.
-  function footprint(g, gx, gy, rPx) {
-    const rx = (rPx / (2 * g.rx)) * GW, ry = (rPx / (2 * g.ry)) * GH, out = [];
-    for (let j = Math.max(0, Math.floor(gy - ry)); j <= Math.min(GH - 1, Math.ceil(gy + ry)); j++)
-      for (let i = Math.max(0, Math.floor(gx - rx)); i <= Math.min(GW - 1, Math.ceil(gx + rx)); i++) {
-        const d = Math.hypot((i - gx) / rx, (j - gy) / ry);
-        if (d <= 1 && inWell(i, j)) out.push([(j * GW + i) * P.length, 1 - d * 0.6]);
-      }
-    return out;
-  }
-  const cellSum = o => { let s = 0; for (let p = 0; p < P.length; p++) s += grid[o + p]; return s; };
-  // The colour of paint at a spot: everything under a small tip, mixed.
-  function sampleAt(g, x, y) {
-    const [gx, gy] = toGrid(g, x, y), drops = {};
-    let tot = 0;
-    for (const [o, w] of footprint(g, gx, gy, 10)) for (let p = 0; p < P.length; p++) { drops[P[p]] = (drops[P[p]] || 0) + grid[o + p] * w; tot += grid[o + p] * w; }
-    return tot > THICK * 0.3 ? mix(drops) : null;
-  }
-  const brushRadius = () => 12 + Math.min(1, amount(brush)) * 4;
-
-  // One dab of the brush at palette point (x, y) after moving d pixels.
-  // Brush and paint trade pigment like a smudge: a loaded brush is "thicker"
-  // than the paint it touches, so it lays paint down; a clean or nearly empty
-  // brush lifts paint and carries it along to the next dab. Paint is conserved.
-  function dab(g, x, y, d) {
-    const [gx, gy] = toGrid(g, x, y);
-    const cells = footprint(g, gx, gy, brushRadius());
-    if (!cells.length) return;
-    const full = wellTotal() >= WELL_CAP;
-    const ex = Math.min(0.5, d * EXCHANGE);
-    for (let p = 0; p < P.length; p++) {
-      const k = P[p];
-      let b = brush[k] || 0;
-      for (const [o, w] of cells) {
-        let t = ex * w * (b / BRUSH_CELLS - grid[o + p]);
-        if (t > 0 && full) t = 0;
-        grid[o + p] += t;
-        b -= t;
-      }
-      if (b > 1e-6) brush[k] = b; else delete brush[k];
-    }
-    // Paint in tins the palette has no slot for (none today) is dropped.
-    for (const k of Object.keys(brush)) if (!P.includes(k)) delete brush[k];
-    if (full && amount(brush) > 0.05) flash('調色盤滿了，按「清洗調色盤」重來');
-    // Even out the cells under the bristles: this is the blending at edges.
-    const a = Math.min(0.5, d * BLEND), avg = new Float32Array(P.length);
-    for (const [o] of cells) for (let p = 0; p < P.length; p++) avg[p] += grid[o + p] / cells.length;
-    for (const [o] of cells) for (let p = 0; p < P.length; p++) grid[o + p] += a * (avg[p] - grid[o + p]);
+  function hit(x, y) {
+    const g = geo(), lx = x - g.left, ly = y - g.top;
+    for (const b of g.blobs) if (Math.hypot(lx - b.x, ly - b.y) <= b.r * 1.25) return { k: b.k };
+    const m = g.mixA, dx = (lx - m.x) / m.rx, dy = (ly - m.y) / m.ry;
+    if (dx * dx + dy * dy <= 1) return { k: 'mix', lx, ly };
+    return null;
   }
 
-  const LOGS = {};
-  for (const [k, [, c]] of Object.entries(PAINTS)) LOGS[k] = c.map(v => Math.log(Math.max(v, 4)));
-  let img = null;
   function drawPaint() {
-    const [w, h] = fitCanvas(pc, px);
-    const g = wellGeom();
+    const [w, h] = fitCanvas(pc, px), g = geo();
     px.clearRect(0, 0, w, h);
-    // Ceramic palette with a deep mixing well
-    px.fillStyle = '#00000022';
-    px.beginPath(); px.ellipse(g.cx + 4, g.cy + 10, w * 0.48, h * 0.44, 0, 0, 7); px.fill();
-    const dish = px.createLinearGradient(0, 0, 0, h);
-    dish.addColorStop(0, '#ffffff'); dish.addColorStop(1, '#e9e6e1');
-    px.fillStyle = dish;
-    px.beginPath(); px.ellipse(g.cx, g.cy, w * 0.48, h * 0.44, 0, 0, 7); px.fill();
-    const inner = px.createRadialGradient(g.cx, g.cy - g.ry * 0.3, g.rx * 0.2, g.cx, g.cy, g.rx * 1.05);
-    inner.addColorStop(0, '#fbfaf8'); inner.addColorStop(1, '#dcd7d0');
-    px.fillStyle = inner;
-    px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.fill();
-    if (grid) {
-      // Each cell shows its own mix; thin paint is see-through.
-      if (!img) { img = document.createElement('canvas'); img.width = GW; img.height = GH; }
-      const ix = img.getContext('2d'), data = ix.createImageData(GW, GH), d = data.data;
-      for (let c = 0; c < GW * GH; c++) {
-        const o = c * P.length;
-        let tot = 0;
-        for (let p = 0; p < P.length; p++) tot += grid[o + p];
-        if (tot <= 1e-6) continue;
-        let r = 0, gg = 0, b = 0;
-        for (let p = 0; p < P.length; p++) {
-          const f = grid[o + p] / tot, lg = LOGS[P[p]];
-          r += f * lg[0]; gg += f * lg[1]; b += f * lg[2];
-        }
-        d[c * 4] = Math.exp(r); d[c * 4 + 1] = Math.exp(gg); d[c * 4 + 2] = Math.exp(b);
-        d[c * 4 + 3] = Math.min(255, (tot / THICK) * 255);
+    const board = () => { px.beginPath(); px.ellipse(g.cx, g.cy, g.RX, g.RY, 0, 0, 7); };
+    // Shadow and board
+    px.save(); px.translate(4, 8); board(); px.fillStyle = '#00000026'; px.fill(); px.restore();
+    const wood = px.createLinearGradient(0, 0, w, h);
+    wood.addColorStop(0, '#f6d3a2'); wood.addColorStop(1, '#e2b57c');
+    board(); px.fillStyle = wood; px.fill();
+    px.strokeStyle = '#c99760'; px.lineWidth = 3; board(); px.stroke();
+    // Mixing area: a slightly worn patch of the board
+    const m = g.mixA, c = mix(well);
+    px.save();
+    px.beginPath(); px.ellipse(m.x, m.y, m.rx, m.ry, 0, 0, 7); px.clip();
+    if (c) {
+      const wet = px.createRadialGradient(m.x - m.rx * 0.3, m.y - m.ry * 0.4, m.rx * 0.05, m.x, m.y, m.rx * 1.05);
+      wet.addColorStop(0, shade(c, 1.15)); wet.addColorStop(0.55, css(c)); wet.addColorStop(1, shade(c, 0.9));
+      px.fillStyle = wet; px.fillRect(0, 0, w, h);
+      // Fresh paint swirls in at the brush and fades into the mix.
+      for (const q of ripples) {
+        const k = 1 - q.t / 0.9;
+        px.globalAlpha = Math.max(0, k) * 0.8;
+        px.fillStyle = css(q.c);
+        px.beginPath(); px.ellipse(q.x, q.y, 10 + q.t * 40, 7 + q.t * 28, stir + q.a, 0, 7); px.fill();
       }
-      ix.putImageData(data, 0, 0);
-      px.save();
-      clipWell(px, g);
-      px.imageSmoothingEnabled = true;
-      px.filter = `blur(${((g.rx * 2) / GW) * 0.6}px)`;
-      px.drawImage(img, g.cx - g.rx, g.cy - g.ry, g.rx * 2, g.ry * 2);
-      px.filter = 'none';
-      // Wet gloss over the paint
-      const gloss = px.createRadialGradient(g.cx - g.rx * 0.35, g.cy - g.ry * 0.45, 2, g.cx - g.rx * 0.35, g.cy - g.ry * 0.45, g.rx * 0.7);
-      gloss.addColorStop(0, '#ffffff33'); gloss.addColorStop(1, '#ffffff00');
-      px.fillStyle = gloss;
-      px.fillRect(0, 0, w, h);
-      px.restore();
+      px.globalAlpha = 1;
+      // Stirring gloss
+      px.strokeStyle = '#ffffff40'; px.lineWidth = 3;
+      for (let i = 0; i < 3; i++) { px.beginPath(); px.ellipse(m.x, m.y, m.rx * (0.3 + i * 0.2), m.ry * (0.25 + i * 0.2), 0, stir + i * 2, stir + i * 2 + 1.6); px.stroke(); }
+    } else {
+      px.fillStyle = '#00000010'; px.fillRect(0, 0, w, h);
     }
-    if (layer) px.drawImage(layer, 0, 0, w, h);
-    px.strokeStyle = '#cfc9c1'; px.lineWidth = 2;
-    px.beginPath(); px.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 7); px.stroke();
-    if (picking) {
-      px.fillStyle = '#3a2e28cc'; px.font = '800 14px system-ui, sans-serif'; px.textAlign = 'center';
-      px.fillText('點一下要送出的顏色', g.cx, g.cy + g.ry + 22);
+    px.restore();
+    px.setLineDash(c ? [] : [6, 6]); px.strokeStyle = c ? '#00000022' : '#a8743f88'; px.lineWidth = 2;
+    px.beginPath(); px.ellipse(m.x, m.y, m.rx, m.ry, 0, 0, 7); px.stroke(); px.setLineDash([]);
+    if (!c) {
+      px.fillStyle = '#8a5a2aaa'; px.font = '700 13px system-ui, sans-serif'; px.textAlign = 'center';
+      px.fillText('點旁邊的顏料沾筆，', m.x, m.y - 4);
+      px.fillText('再按在這裡混色', m.x, m.y + 16);
     }
-    if (!wellTotal()) {
-      px.fillStyle = '#8a7c70aa'; px.font = '700 14px system-ui, sans-serif'; px.textAlign = 'center';
-      px.fillText('按住拖曳畫筆：先沾顏料，', g.cx, g.cy - 8);
-      px.fillText('再到這裡刷開、互相融合', g.cx, g.cy + 14);
+    // Paint blobs
+    for (const b of g.blobs) {
+      const pc0 = PAINTS[b.k][1], on = brush === b.k;
+      px.fillStyle = '#0000001f'; px.beginPath(); px.ellipse(b.x + 2, b.y + 5, b.r, b.r * 0.85, 0, 0, 7); px.fill();
+      px.fillStyle = shade(pc0, 0.82); px.beginPath(); px.ellipse(b.x, b.y + 2, b.r, b.r * 0.85, 0, 0, 7); px.fill();
+      px.fillStyle = css(pc0); px.beginPath(); px.ellipse(b.x, b.y, b.r * 0.94, b.r * 0.8, 0, 0, 7); px.fill();
+      px.fillStyle = '#ffffff99'; px.beginPath(); px.ellipse(b.x - b.r * 0.35, b.y - b.r * 0.3, b.r * 0.32, b.r * 0.16, -0.5, 0, 7); px.fill();
+      if (on) { px.strokeStyle = '#3a2e28'; px.lineWidth = 3; px.beginPath(); px.ellipse(b.x, b.y + 1, b.r * 1.16, b.r * 1.0, 0, 0, 7); px.stroke(); }
+      px.fillStyle = '#5a3a1c'; px.font = '800 12px system-ui, sans-serif'; px.textAlign = 'center';
+      px.fillText(PAINTS[b.k][0], b.x, b.y + b.r + 16);
     }
+    // Thumb hole and notch are cut through the board.
+    px.save();
+    px.globalCompositeOperation = 'destination-out';
+    px.beginPath(); px.ellipse(g.hole.x, g.hole.y, g.hole.rx, g.hole.ry, 0, 0, 7); px.fill();
+    px.beginPath(); px.arc(g.notch.x, g.notch.y, g.notch.r, 0, 7); px.fill();
+    px.restore();
+    px.strokeStyle = '#c99760'; px.lineWidth = 3;
+    px.beginPath(); px.ellipse(g.hole.x, g.hole.y, g.hole.rx, g.hole.ry, 0, 0, 7); px.stroke();
   }
 
   function syncUI() {
-    const total = amount(brush), c = mix(brush);
-    $('brushPaint').style.height = Math.round(Math.min(1, total) * 40) + 'px';
-    $('brushPaint').style.background = c ? css(c) : 'transparent';
-    $('loadTxt').textContent = total < 0.02 ? '乾淨' : `${Math.round(total * 100)}%`;
-    const t = wellTotal();
-    $('amountTxt').textContent = t.toFixed(1);
-    // Live match meter: the colour right under the brush tip.
-    const pct = probe ? similarity(probe, target) : 0;
+    $('brushPaint').style.height = brush ? '40px' : '0';
+    $('brushPaint').style.background = brush ? css(PAINTS[brush][1]) : 'transparent';
+    const t = amount(well), m = mix(well), pct = m ? similarity(m, target) : 0;
     $('meterFill').style.width = pct + '%';
     $('meterFill').style.background = pct >= 90 ? '#3ddc84' : pct >= 60 ? '#ffc93c' : '#ff8a6a';
-    $('meterTxt').textContent = probe ? `筆尖相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
-    $('btnDone').disabled = t < 0.05;
-    $('btnDone').classList.toggle('picking', picking);
+    $('meterTxt').textContent = m ? `相似度 ${pct}%${pct >= 99 ? '　完美！' : pct >= 90 ? '　可以過關了' : ''}` : '相似度 --';
+    $('btnDone').disabled = t < 0.2;
     $('btnClear').disabled = !t;
   }
 
-  function renderBuckets() {
-    $('buckets').innerHTML = L.paints.map(k => `<div class="bucket" data-k="${k}">
-      <div class="tin"><div class="top"><i style="background:${css(PAINTS[k][1])}"></i></div><div class="label" style="background:${css(PAINTS[k][1])}"></div></div>
-      <div class="name">${PAINTS[k][0]}</div></div>`).join('') +
-      `<div class="bucket water" data-k="water"><div class="tin"><div class="top"><i></i></div></div><div class="name">洗筆水</div></div>`;
-  }
-
-  // Hit areas are measured when a drag starts (the layout doesn't move mid-drag).
-  function measure() {
-    rects = [...document.querySelectorAll('.bucket')].map(el => ({ k: el.dataset.k, el, r: el.querySelector('.tin').getBoundingClientRect() }));
-  }
-  function hit(x, y) {
-    for (const { k, el, r } of rects) if (x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 18 && y <= r.bottom) return { k, el };
-    const pr = pc.getBoundingClientRect(), g = wellGeom();
-    const dx = (x - pr.left - g.cx) / g.rx, dy = (y - pr.top - g.cy) / g.ry;
-    if (dx * dx + dy * dy <= 1) return { k: 'well' };
-    return null;
-  }
   function placeBrush(x, y) {
     $('brush').style.transform = `translate(${x - 13}px, ${y - 118}px) rotate(${tilt}deg)`;
   }
-
   function brushMove(x, y) {
     if (lastPt) tilt = Math.max(-25, Math.min(25, tilt * 0.8 + (x - lastPt.x) * 0.9));
+    lastPt = { x, y };
     placeBrush(x, y);
     const h = hit(x, y);
     overKey = h ? h.k : null;
-    document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
-    if (h && h.el) h.el.classList.add('dip');
-    if (held && h && h.k === 'well') {
-      const pr = pc.getBoundingClientRect(), g = wellGeom();
-      const from = lastPt || { x, y };
-      const d = Math.hypot(x - from.x, y - from.y);
-      // Dab every few pixels so fast strokes stay continuous.
-      const n = Math.max(1, Math.ceil(d / 4));
-      for (let s = 1; s <= n; s++) dab(g, from.x + ((x - from.x) * s) / n - pr.left, from.y + ((y - from.y) * s) / n - pr.top, lastPt ? d / n : 2);
-      // A faint wet sheen follows the bristles and fades as you keep brushing.
-      lctx.save();
-      clipWell(lctx, g);
-      lctx.lineCap = 'round';
-      lctx.globalCompositeOperation = 'destination-out';
-      lctx.globalAlpha = Math.min(0.3, d * 0.003);
-      lctx.fillRect(0, 0, g.w, g.h);
-      lctx.globalCompositeOperation = 'source-over';
-      lctx.globalAlpha = 1;
-      lctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      lctx.lineWidth = brushRadius() * 1.4;
-      lctx.beginPath(); lctx.moveTo(from.x - pr.left, from.y - pr.top); lctx.lineTo(x - pr.left, y - pr.top); lctx.stroke();
-      lctx.restore();
-      probe = sampleAt(g, x - pr.left, y - pr.top);
-      drawPaint();
-    }
-    lastPt = { x, y };
-    syncUI();
+    if (held && h && h.k !== 'mix' && brush !== h.k) { brush = h.k; drawPaint(); syncUI(); }
+    if (held && h && h.k === 'mix' && !brush) flash('先點旁邊的顏料沾筆');
   }
 
-  // Loading and washing happen over time while the brush rests in a tin.
-  let lastT = 0;
+  // Paint flows in while the loaded brush stays in the mixing area.
+  let lastT = 0, lastRipple = 0;
   function tick(t) {
     const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
     lastT = t;
-    if (held && overKey && overKey !== 'well') {
-      if (overKey === 'water') {
-        for (const k of Object.keys(brush)) { brush[k] *= Math.exp(-4 * dt); if (brush[k] < 0.01) delete brush[k]; }
-      } else {
-        const room = 1 - amount(brush);
-        if (room > 0) brush[overKey] = (brush[overKey] || 0) + Math.min(room, LOAD_RATE * dt);
-      }
-      syncUI();
+    let redraw = ripples.length > 0;
+    if (held && overKey === 'mix' && brush && lastPt) {
+      const room = WELL_CAP - amount(well);
+      if (room > 0) {
+        well[brush] = (well[brush] || 0) + Math.min(room, RATE * dt);
+        stir += dt * 3;
+        if (t - lastRipple > 90) {
+          lastRipple = t;
+          const g = geo();
+          ripples.push({ x: lastPt.x - g.left, y: lastPt.y - g.top, c: PAINTS[brush][1], t: 0, a: Math.random() * 3 });
+        }
+        redraw = true;
+        drawTarget();
+        syncUI();
+      } else flash('調色盤滿了，按「清空」重來');
     }
+    for (const q of ripples) q.t += dt;
+    ripples = ripples.filter(q => q.t < 0.9);
+    if (redraw) drawPaint();
     requestAnimationFrame(tick);
   }
 
   let flashTimer;
   function flash(t) {
-    $('info').dataset.msg = t;
-    $('info').firstChild.textContent = t + '　';
+    $('hint').textContent = t;
+    $('hint').classList.add('on');
     clearTimeout(flashTimer);
-    flashTimer = setTimeout(() => ($('info').firstChild.textContent = '筆刷 '), 1500);
+    flashTimer = setTimeout(() => $('hint').classList.remove('on'), 1500);
   }
 
   document.addEventListener('pointerdown', ev => {
     if (ev.target.closest('button, .overlay, nav, header')) return;
-    if (picking) {
-      // Eyedropper: tap the spot whose colour you want to submit.
-      picking = false;
-      const pr = pc.getBoundingClientRect(), g = wellGeom(), x = ev.clientX - pr.left, y = ev.clientY - pr.top;
-      const dx = (x - g.cx) / g.rx, dy = (y - g.cy) / g.ry, c = dx * dx + dy * dy <= 1 ? sampleAt(g, x, y) : null;
-      drawPaint(); syncUI();
-      if (c) finish(c); else flash('那裡沒有顏料，再按一次「比對顏色」');
-      return;
-    }
     held = true;
-    measure();
     lastPt = null;
     brushMove(ev.clientX, ev.clientY);
   });
   document.addEventListener('pointermove', ev => { if (held) brushMove(ev.clientX, ev.clientY); });
-  const release = () => {
-    held = false;
-    lastPt = null;
-    document.querySelectorAll('.bucket.dip').forEach(b => b.classList.remove('dip'));
-  };
+  const release = () => { held = false; overKey = null; };
   document.addEventListener('pointerup', release);
   document.addEventListener('pointercancel', release);
 
   function restBrush() {
     const r = pc.getBoundingClientRect();
     tilt = 18;
-    placeBrush(r.right - 18, r.bottom - 6);
+    placeBrush(r.right - 24, r.bottom - 4);
   }
 
   function load(i) {
@@ -636,12 +512,10 @@
     store.set('progress', progress);
     L = levelAt(i);
     target = mix(L.recipe);
-    brush = {};
-    chosen = null;
-    picking = false;
+    well = {};
+    brush = null;
+    ripples = [];
     $('lvlName').textContent = `第 ${i + 1} 關・${L.name}`;
-    renderBuckets();
-    resetWell();
     drawTarget();
     drawPaint();
     syncUI();
@@ -649,9 +523,8 @@
     $('box').classList.remove('show');
   }
 
-  function finish(c) {
-    chosen = c;
-    drawTarget();
+  function finish() {
+    const c = mix(well);
     const pct = similarity(c, target);
     const stars = pct >= 99 ? 3 : pct >= 95 ? 2 : pct >= PASS ? 1 : 0;
     if (stars) {
@@ -757,20 +630,19 @@
   }
   function showHelp() {
     $('boxCard').innerHTML = `<h2>調色師</h2><ul class="help">
-      <li>左上角卡片是目標顏色，你要在調色盤上調出它。</li>
-      <li>按住畫面就能拿起畫筆。把筆停在顏料桶裡沾顏料，停越久沾越多（看筆尖和「筆刷 %」）。</li>
-      <li>拖到調色盤上刷，顏料會留在你刷過的地方，不同顏色可以分開放好幾團。</li>
-      <li>在兩團顏色的交界來回刷，就能把它們推開、融合；乾淨的筆也能把顏料帶到別處。</li>
-      <li>筆上還有別的顏色時沾新顏料會混在筆上，可以先到「洗筆水」裡停一下洗乾淨。</li>
-      <li>「相似度」顯示筆尖下那塊顏色離目標多遠；想挑戰的話，按右上角「提示」把它關掉。</li>
-      <li>調好後按「比對顏色」，再點調色盤上要送出的那一塊。90% 以上過關，99% 拿三星，角色會塗上你選的顏色。</li>
+      <li>左上角卡片是目標顏色，大角色會即時穿上你調出的顏色，方便對照。</li>
+      <li>按住畫面就能拿起畫筆。碰一下調色盤邊上的顏料，筆就換成那個顏色（一次只沾一種）。</li>
+      <li>把沾好的筆按在中間的混色區，停越久加越多，整個混色區會一起變色。</li>
+      <li>換另一個顏料再按回混色區，就能把顏色調深、調淺或調出新顏色；按「清空」重來。</li>
+      <li>「相似度」顯示目前的顏色離目標多遠；想挑戰的話，按右上角「提示」把它關掉。</li>
+      <li>調好後按「比對顏色」。90% 以上過關，99% 拿三星。</li>
     </ul><button class="primary" id="bGo" style="max-width:none;width:100%">開始</button>`;
     $('box').classList.add('show');
     $('bGo').onclick = () => { $('box').classList.remove('show'); store.set('seen', true); };
   }
 
-  $('btnClear').onclick = () => { resetWell(); picking = false; drawPaint(); syncUI(); };
-  $('btnDone').onclick = () => { picking = !picking; drawPaint(); syncUI(); };
+  $('btnClear').onclick = () => { well = {}; ripples = []; drawPaint(); drawTarget(); syncUI(); };
+  $('btnDone').onclick = finish;
   let meterOn = store.get('meter', true);
   const applyMeter = () => { $('meter').classList.toggle('off', !meterOn); $('btnMeter').textContent = `提示：${meterOn ? '開' : '關'}`; };
   $('btnMeter').onclick = () => { meterOn = !meterOn; store.set('meter', meterOn); applyMeter(); };
@@ -780,8 +652,8 @@
   $('btnBrushes').onclick = showBrushes;
   applyBrush();
   $('btnHelp').onclick = showHelp;
-  window.addEventListener('resize', () => { resetLayer(); drawTarget(); drawPaint(); restBrush(); syncUI(); });
-  window.__color = { mix, similarity, levelAt, state: () => ({ grid, P, brush, target, L, chosen }), sampleAt: (x, y) => { const pr = pc.getBoundingClientRect(); return sampleAt(wellGeom(), x - pr.left, y - pr.top); } };
+  window.addEventListener('resize', () => { drawTarget(); drawPaint(); restBrush(); syncUI(); });
+  window.__color = { mix, similarity, levelAt, state: () => ({ well, brush, target, L }), geo };
 
   load(progress.level || 0);
   requestAnimationFrame(tick);

@@ -13,7 +13,7 @@
 | 落球作戰 | https://josephinezulin.github.io/My-Games/bounce/ | 倒出彈珠穿過倍增門，把足夠的彈珠接進杯子。共 30 關 |
 | 攻城之王 | https://josephinezulin.github.io/My-Games/lord/ | 左右滑動選擇路線，穿過機關壯大軍隊，攻下敵方城堡，升級英雄、獅鷲與城鎮 |
 | 王者之路 | https://josephinezulin.github.io/My-Games/runner/ | 無盡雙跑道衝鋒：踩加兵台階、選倍增門、擊退敵群，每隔幾段挑戰一名巨人 |
-| 調色師 | https://josephinezulin.github.io/My-Games/color/ | 用畫筆沾顏料在調色盤上刷開、融合多種顏色，點選調好的那一塊來配出目標顏色。前 20 關手工設計，之後無限生成 |
+| 調色師 | https://josephinezulin.github.io/My-Games/color/ | 在木製調色盤上用畫筆沾顏料，按在中央混色區，停留越久加越多，調出目標顏色。前 20 關手工設計，之後無限生成 |
 
 所有遊戲都支援手機觸控，進度存在瀏覽器（localStorage）。
 
