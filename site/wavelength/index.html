@@ -4,6 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <title>同頻轉盤</title>
+<script>
+// 自動更新：部署時 __BUILD__ 會被換成版本號；發現有新版就重新載入一次（遊戲中不打斷）
+(function () {
+  var B = '__BUILD__';
+  try { var u = new URL(location.href); if (u.searchParams.has('r')) { u.searchParams.delete('r'); history.replaceState(null, '', u.pathname + u.search + u.hash); } } catch (e) {}
+  if (B.indexOf('__') === 0) return;
+  function check() {
+    if (window.__wlBusy && window.__wlBusy()) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.v || j.v === B || (window.__wlBusy && window.__wlBusy())) return;
+      var k = 'wl:upd:' + j.v;
+      try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) { return; }
+      var n = new URL(location.href); n.searchParams.set('r', j.v); location.replace(n.toString());
+    }).catch(function () {});
+  }
+  check();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+})();
+</script>
 <meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高。可連線開房，也可以一支手機輪流玩。">
 <style>
   /* VOICE  熱鬧的派對桌遊：首頁與設定畫面用文字說清楚，遊戲中盡量用圖示
@@ -444,7 +463,7 @@
   <input type="text" id="chatIn" maxlength="200" placeholder="…" autocomplete="off" enterkeyhint="send" aria-label="訊息">
   <button class="send" aria-label="送出"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button>
 </form>
-<script src="cards.js"></script>
+<script src="cards.js?b=__BUILD__"></script>
 <script type="module">
 {
 const $ = id => document.getElementById(id);
@@ -1775,6 +1794,7 @@ wheel.addEventListener('keydown', e => {
 });
 addEventListener('hashchange', () => { if (!room) showJoin(); });
 showView('homeView');
+window.__wlBusy = () => !!room;
 if (DEV) window.__wl = { G: () => G(), me: () => me, avatarMap: () => avatarMap(), seq: () => seq };
 }
 </script>

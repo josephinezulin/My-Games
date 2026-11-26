@@ -24,6 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stamp build version (auto-update without ?v=)
+        run: |
+          V="${GITHUB_SHA::8}"
+          sed -i "s/__BUILD__/$V/g" site/wavelength/index.html
+          printf '{"v":"%s"}\n' "$V" > site/wavelength/version.json
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site
