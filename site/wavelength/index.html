@@ -80,7 +80,34 @@
   .big { font-size: 40px; font-weight: 900; text-align: center; line-height: 1.1; }
   .pts { text-align: center; font-size: 22px; font-weight: 900; margin-top: 6px; }
 
-  .players { display: flex; gap: 6px; flex-wrap: wrap; }
+  /* 玩家頭像列（固定在上方） */
+  #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 10px; overflow-x: auto; padding: 2px 14px 10px; scrollbar-width: none; }
+  #people::-webkit-scrollbar { display: none; }
+  .av { position: relative; flex: none; width: 52px; text-align: center; }
+  .av i { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; font-style: normal;
+          font-size: 19px; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px transparent; }
+  .av.me i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--panel); }
+  .av.off { opacity: .35; }
+  .av small { display: block; font-size: 12px; font-weight: 700; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .av .bd { position: absolute; top: -3px; right: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+  .av .bd.psy { background: var(--z2); color: var(--ink); }
+  .av .bd.ok { background: #3ddc97; color: var(--ink); }
+  .av .sc { position: absolute; top: 30px; right: -2px; min-width: 22px; height: 18px; border-radius: 9px; background: var(--panel); color: var(--ink);
+            font-size: 12px; font-weight: 900; line-height: 18px; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; min-height: 44px; padding: 0; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
+  .seg button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
+  .seg button:disabled { opacity: 1; }
+  .mode { display: flex; gap: 10px; justify-content: center; margin: 10px 0 2px; }
+  .mode span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 14px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); }
+  .mode span.on { background: var(--ink); color: #fff; box-shadow: none; }
+  .res { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .res div { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 900; }
+  .res div i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; }
+  .res div.zero { opacity: .5; }
+  .podium li { align-items: center; }
+  .podium li span { display: flex; align-items: center; gap: 8px; }
+  .podium li i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 900; }
   .players span { background: #fff; box-shadow: inset 0 0 0 2px var(--line); border-radius: 999px; padding: 4px 10px; font-size: 14px; font-weight: 700; }
   .players span.psy { background: var(--z2); box-shadow: none; }
   .players span.off { opacity: .45; }
@@ -104,23 +131,24 @@
   <h1>同頻轉盤</h1>
   <span class="chip hide" id="roomChip"></span>
 </header>
+<div id="people" class="hide" aria-label="玩家"></div>
 
 <div class="stage">
 <main id="main">
   <!-- 進入畫面 -->
   <section class="card" id="joinView">
-    <h2>線上版 Wavelength</h2>
-    <p class="muted" style="margin:0">輪流當出題者：出題者看得到目標區，給一個線索；其他人一起轉指針，越接近中心分數越高。2 人以上就能玩。</p>
-    <label for="nameIn">你的暱稱</label>
+    <label for="nameIn" style="margin-top:0">暱稱</label>
     <input type="text" id="nameIn" maxlength="12" placeholder="例如：小明" autocomplete="nickname">
     <div id="newBox">
-      <div class="actions" style="justify-content:flex-start;margin-top:14px"><button id="createBtn">建立新房間</button></div>
-      <label for="codeIn">或輸入朋友的房號</label>
+      <label>每人出題次數</label>
+      <div class="seg" id="perPick"></div>
+      <div class="actions" style="justify-content:stretch;margin-top:14px"><button id="createBtn" style="flex:1">建立房間</button></div>
+      <label for="codeIn">加入房號</label>
       <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="4 碼房號" autocapitalize="characters"><button class="ghost" id="joinCodeBtn">加入</button></div>
     </div>
     <div id="hashBox" class="hide">
-      <p class="muted">要加入房間 <b id="hashCode"></b></p>
-      <div class="actions" style="justify-content:flex-start"><button id="joinHashBtn">加入房間</button><button class="ghost" id="otherBtn">改開新房間</button></div>
+      <p class="big" style="font-size:32px;margin:10px 0" id="hashCode"></p>
+      <div class="actions" style="justify-content:flex-start"><button id="joinHashBtn">加入</button><button class="ghost" id="otherBtn">開新房間</button></div>
     </div>
     <p class="muted" id="joinErr" role="alert"></p>
   </section>
@@ -129,36 +157,31 @@
   <section class="card hide" id="gameView">
     <div class="status"><span id="roundTxt"></span><span id="scoreTxt"></span></div>
     <div id="lobbyBox">
-      <h2>等待大家到齊</h2>
-      <p class="muted" style="margin:0 0 8px">把連結傳給朋友，對方打開就會進到同一個房間。</p>
+      <div class="mode"><span id="mCoop">合作 2 人</span><span id="mPk">對戰 3+ 人</span></div>
+      <label>每人出題次數</label>
+      <div class="seg" id="perLobby"></div>
+      <p class="say" id="startHint"></p>
       <div class="share" id="shareTxt"></div>
-      <div class="actions" style="justify-content:flex-start">
-        <button class="ghost small" id="copyBtn">複製邀請連結</button>
-        <button id="startBtn">開始遊戲</button>
+      <div class="actions">
+        <button class="ghost" id="copyBtn">複製邀請連結</button>
+        <button id="startBtn">開始</button>
       </div>
-      <p class="muted" id="startHint"></p>
     </div>
     <div id="playBox" class="hide">
       <div class="wheelbox"><svg id="wheel" viewBox="0 0 400 222" role="slider" aria-label="指針" aria-valuemin="0" aria-valuemax="180" tabindex="0"></svg></div>
       <div class="ends"><div id="leftEnd"></div><div id="rightEnd"></div></div>
       <div class="clue" id="clueTxt"></div>
       <p class="say" id="sayTxt"></p>
-      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="輸入你的線索"><button id="clueBtn">送出線索</button></div>
-      <div class="pts hide" id="ptsTxt"></div>
+      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="你的線索"><button id="clueBtn">送出</button></div>
+      <div class="res hide" id="resBox"></div>
       <div class="actions" id="actBox"></div>
     </div>
     <div id="endBox" class="hide">
-      <p class="muted" style="text-align:center;margin:0">總分</p>
       <div class="big" id="finalTxt"></div>
       <p class="pts" id="rankTxt"></p>
-      <ul class="log" id="logList"></ul>
+      <ul class="log podium" id="podium"></ul>
       <div class="actions"><button id="againBtn">再玩一局</button></div>
     </div>
-  </section>
-
-  <section class="card hide" id="peopleView">
-    <h2>玩家</h2>
-    <div class="players" id="players"></div>
   </section>
 
   <p class="net" id="netTxt"></p>
@@ -180,7 +203,6 @@
 {
 const $ = id => document.getElementById(id);
 const CARDS = window.WL_CARDS;
-const ROUNDS = 10;
 const CX = 200, CY = 206, R = 186;
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -239,23 +261,37 @@ async function connect(code) {
 }
 
 // ---------- 狀態 ----------
-let room, me, code, game, dial, profile, chat;
-let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0;
+let room, me, code, game, dial, profile, chat, guessSt;
+let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', wantPer = Number(store.get('wl:per')) || 2, revealing = false;
 
-const initialGame = { phase: 'lobby', round: 0, order: [], pi: 0, psychic: null, card: null, used: [], clue: '', guess: null, target: null, pts: null, score: 0, log: [] };
+const initialGame = { phase: 'lobby', host: null, per: 2, mode: 'coop', gid: '', round: 0, total: 0, order: [], psychic: null, card: null, used: [],
+  clue: '', target: null, guesses: {}, results: {}, psyPts: 0, score: 0, scores: {}, log: [] };
+const COLORS = ['#e2483d', '#2f6fd6', '#2f8f6a', '#8e44ad', '#d97706', '#0f766e', '#be185d', '#475569'];
 
 const online = () => [me, ...Object.keys(room.getUsers()).filter(id => id !== me)];
 const nameOf = id => (profile.get(id) || {}).name || '玩家';
 const G = () => ({ ...initialGame, ...(game.get() || {}) });
+const initial = n => Array.from(n.trim())[0] || '?';
+function colorOf(id) {
+  const g = G();
+  let i = g.order.indexOf(id);
+  if (i < 0) { const ids = [...new Set([...g.order, ...online().filter(x => !g.order.includes(x)).sort()])]; i = ids.indexOf(id); }
+  return COLORS[Math.max(i, 0) % COLORS.length];
+}
+const guessersOf = g => online().filter(id => id !== g.psychic);
+function lockedOf(g) {
+  const all = guessSt.getAll();
+  return Object.keys(all).filter(id => id !== g.psychic && all[id] && all[id].gid === g.gid && all[id].r === g.round);
+}
+const myLock = g => { const x = guessSt.get(me); return x && x.gid === g.gid && x.r === g.round ? x.v : null; };
 
 function pickCard(used) {
   const free = CARDS.map((_, i) => i).filter(i => !used.includes(i));
   const pool = free.length ? free : CARDS.map((_, i) => i);
   return pool[Math.floor(Math.random() * pool.length)];
 }
-function secretKey(g) { return `wl:${code}:${g.round}:${g.card}`; }
 function mySecret(g) {
-  const k = secretKey(g);
+  const k = `wl:${code}:${g.gid}:${g.round}:${g.card}`;
   let t = Number(store.get(k));
   if (!t) { t = 8 + Math.floor(Math.random() * 165); store.set(k, String(t)); }
   return t;
@@ -264,30 +300,33 @@ function score(guess, target) {
   const d = Math.abs(guess - target);
   return d <= 4 ? 4 : d <= 12 ? 3 : d <= 20 ? 2 : 0;
 }
-function rank(s) {
-  const max = ROUNDS * 4, r = s / max;
+function rank(s, max) {
+  const r = s / max;
   return r >= .75 ? '心靈相通' : r >= .55 ? '默契十足' : r >= .35 ? '還算有默契' : '再多磨合一下';
 }
 
 // ---------- 遊戲動作 ----------
+async function setPer(n) {
+  wantPer = n; store.set('wl:per', String(n));
+  await game.set(p => (p.phase === 'lobby' || p.phase === 'end' ? { ...initialGame, ...p, per: n } : p));
+}
 async function startGame() {
-  const order = online();
+  const order = online().sort();
   if (order.length < 2) return;
-  const card = pickCard([]);
-  await game.set({ ...initialGame, phase: 'clue', round: 1, order, pi: 0, psychic: order[0], card, used: [card] });
+  const g0 = G(), per = g0.per || 2, card = pickCard([]);
+  await game.set({ ...initialGame, host: g0.host, per, mode: order.length === 2 ? 'coop' : 'pk', gid: Math.random().toString(36).slice(2, 8),
+    phase: 'clue', round: 1, total: order.length * per, order, psychic: order[0], card, used: [card],
+    scores: Object.fromEntries(order.map(id => [id, 0])) });
   await dial.set(90);
 }
 async function nextRound() {
   await game.set(p => {
     const g = { ...initialGame, ...p };
-    if (g.phase !== 'reveal' && g.phase !== 'clue' && g.phase !== 'guess') return p;
-    if (g.round >= ROUNDS) return { ...g, phase: 'end' };
-    const on = online();
-    const order = [...g.order.filter(id => on.includes(id)), ...on.filter(id => !g.order.includes(id))];
-    const prevIdx = order.indexOf(g.psychic);
-    const pi = ((prevIdx === -1 ? g.pi - 1 : prevIdx) + 1 + order.length) % order.length;
-    const card = pickCard(g.used);
-    return { ...g, phase: 'clue', round: g.round + 1, order, pi, psychic: order[pi], card, used: [...g.used, card], clue: '', guess: null, target: null, pts: null };
+    if (!['reveal', 'clue', 'guess'].includes(g.phase)) return p;
+    if (g.round >= g.total) return { ...g, phase: 'end' };
+    const round = g.round + 1, card = pickCard(g.used);
+    return { ...g, phase: 'clue', round, psychic: g.order[(round - 1) % g.order.length], card, used: [...g.used, card],
+      clue: '', target: null, guesses: {}, results: {}, psyPts: 0 };
   });
   await dial.set(90);
 }
@@ -301,67 +340,80 @@ async function sendClue() {
   await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue } : p));
 }
 async function lockGuess() {
-  const v = Math.round(localDial);
-  await dial.set(v);
-  await game.set(p => (p.phase === 'guess' ? { ...p, phase: 'locked', guess: v } : p));
+  const g = G(), v = Math.round(localDial);
+  if (g.mode === 'coop') await dial.set(v);
+  await guessSt.set({ gid: g.gid, r: g.round, v });
 }
-async function revealIfPsychic() {
+async function revealIfPsychic(force) {
   const g = G();
-  if (g.phase !== 'locked' || g.psychic !== me) return;
-  const target = mySecret(g);
-  const pts = score(g.guess, target);
-  await game.set(p => (p.phase === 'locked' && p.round === g.round ? {
-    ...p, phase: 'reveal', target, pts, score: p.score + pts,
-    log: [...p.log, { r: p.round, card: p.card, clue: p.clue, pts, by: nameOf(p.psychic) }],
-  } : p));
+  if (g.phase !== 'guess' || g.psychic !== me || revealing) return;
+  const locked = lockedOf(g), need = guessersOf(g);
+  if (!locked.length || (!force && need.some(id => !locked.includes(id)))) return;
+  revealing = true;
+  const all = guessSt.getAll(), target = mySecret(g), guesses = {}, results = {};
+  for (const id of locked) { guesses[id] = all[id].v; results[id] = score(all[id].v, target); }
+  const avg = Math.round(Object.values(results).reduce((a, b) => a + b, 0) / locked.length);
+  try {
+    await game.set(p => {
+      if (p.phase !== 'guess' || p.round !== g.round || p.gid !== g.gid) return p;
+      const scores = { ...(p.scores || {}) };
+      if (p.mode === 'pk') { for (const id in results) scores[id] = (scores[id] || 0) + results[id]; scores[me] = (scores[me] || 0) + avg; }
+      return { ...p, phase: 'reveal', target, guesses, results, psyPts: avg, score: p.score + (p.mode === 'coop' ? avg : 0), scores,
+        log: [...p.log, { r: p.round, card: p.card, clue: p.clue, by: p.psychic, pts: avg }] };
+    });
+  } finally { revealing = false; }
 }
 
 // ---------- 轉盤繪製 ----------
 const pt = (a, r) => { const t = a * Math.PI / 180; return [CX - r * Math.cos(t), CY - r * Math.sin(t)]; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const f1 = n => n.toFixed(1);
 function wedge(a1, a2, r, fill) {
   a1 = clamp(a1, 0, 180); a2 = clamp(a2, 0, 180);
   if (a2 <= a1) return '';
   const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
-  return `<path d="M${CX} ${CY}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z" fill="${fill}"/>`;
+  return `<path d="M${CX} ${CY}L${f1(x1)} ${f1(y1)}A${r} ${r} 0 0 1 ${f1(x2)} ${f1(y2)}Z" fill="${fill}"/>`;
 }
 function zones(t) {
   let s = wedge(t - 20, t + 20, R - 6, 'var(--z2)') + wedge(t - 12, t + 12, R - 6, 'var(--z3)') + wedge(t - 4, t + 4, R - 6, 'var(--z4)');
   [[-16, 2], [-8, 3], [0, 4], [8, 3], [16, 2]].forEach(([o, n]) => {
     const a = t + o; if (a < 2 || a > 178) return;
     const [x, y] = pt(a, R - 30);
-    s += `<text x="${x.toFixed(1)}" y="${(y + 6).toFixed(1)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
+    s += `<text x="${f1(x)}" y="${f1(y + 6)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
   });
   return s;
 }
-function drawWheel(g, value) {
-  const amPsy = g.psychic === me;
-  const showT = g.phase === 'reveal' ? g.target : (amPsy && (g.phase === 'clue' || g.phase === 'guess' || g.phase === 'locked') ? mySecret(g) : null);
-  const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
-  const needleOn = g.phase !== 'clue' || !amPsy;
-  const [nx, ny] = pt(value, R - 16);
+function needle(v, color, label) {
+  const [nx, ny] = pt(v, R - 16);
+  let s = `<line x1="${CX}" y1="${CY}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#1f2a2b" stroke-width="6" stroke-linecap="round"/>`;
+  if (label) {
+    const [lx, ly] = pt(v, R - 16);
+    s += `<circle cx="${f1(lx)}" cy="${f1(ly)}" r="13" fill="${color}" stroke="#1f2a2b" stroke-width="2.5"/><text x="${f1(lx)}" y="${f1(ly + 5)}" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">${label}</text>`;
+  } else s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="9" fill="${color}" stroke="#1f2a2b" stroke-width="3"/>`;
+  return s;
+}
+function drawWheel(g, showT, needles) {
+  const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
   let s = `<path d="M${CX - R - 8} ${CY}A${R + 8} ${R + 8} 0 0 1 ${CX + R + 8} ${CY}Z" fill="#0a2b2c"/>`;
   s += `<path d="M${CX - R} ${CY}A${R} ${R} 0 0 1 ${CX + R} ${CY}Z" fill="#fbf4e6"/>`;
   if (showT != null) s += zones(showT);
-  else if (g.phase !== 'lobby') s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 96}" text-anchor="middle" font-size="15" font-weight="800" fill="#8a7f69">目標區藏在這裡</text>`;
-  s += ticks;
-  if (needleOn) s += `<line x1="${CX}" y1="${CY}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#1f2a2b" stroke-width="7" stroke-linecap="round"/><circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="9" fill="#e2483d" stroke="#1f2a2b" stroke-width="3"/>`;
+  else s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 92}" text-anchor="middle" font-size="40" font-weight="900" fill="#d6cab2">?</text>`;
+  s += ticks + needles.map(n => needle(n.v, n.color, n.label)).join('');
   s += `<circle cx="${CX}" cy="${CY}" r="22" fill="#1f2a2b"/><circle cx="${CX}" cy="${CY}" r="9" fill="#e2483d"/>`;
   $('wheel').innerHTML = s;
-  $('wheel').setAttribute('aria-valuenow', String(Math.round(value)));
 }
-function canDrag() { const g = G(); return g.phase === 'guess' && g.psychic !== me; }
+function canDrag() { const g = G(); return g.phase === 'guess' && g.psychic !== me && myLock(g) == null; }
 function angleFromEvent(e) {
   const svg = $('wheel'), p = svg.createSVGPoint();
   p.x = e.clientX; p.y = e.clientY;
   const q = p.matrixTransform(svg.getScreenCTM().inverse());
-  const dx = q.x - CX, dy = CY - q.y;
-  let th = Math.atan2(Math.max(dy, 0), dx) * 180 / Math.PI;
+  const th = Math.atan2(Math.max(CY - q.y, 0), q.x - CX) * 180 / Math.PI;
   return clamp(180 - th, 0, 180);
 }
 function pushDial(v) {
   localDial = v;
-  drawWheel(G(), v);
+  renderWheel();
+  if (G().mode !== 'coop') return;
   const now = Date.now();
   clearTimeout(sendTimer);
   if (now - lastSend > 60) { lastSend = now; dial.set(Math.round(v)); }
@@ -370,71 +422,127 @@ function pushDial(v) {
 
 // ---------- 畫面 ----------
 function text(el, s) { el.textContent = s; }
-function renderPlayers() {
-  const g = G(), on = online();
-  const ids = [...new Set([...on, ...g.order])];
-  const box = $('players');
-  box.replaceChildren(...ids.map(id => {
-    const s = document.createElement('span');
-    s.textContent = nameOf(id) + (id === me ? '（你）' : '') + (id === g.psychic && g.phase !== 'lobby' && g.phase !== 'end' ? '・出題中' : '');
-    if (id === g.psychic && g.phase !== 'lobby' && g.phase !== 'end') s.className = 'psy';
-    if (!on.includes(id)) s.className += ' off';
-    return s;
+const ICON_EYE = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>';
+const ICON_OK = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function avatarEl(id, cls) {
+  const el = document.createElement('i');
+  el.style.background = colorOf(id);
+  el.textContent = initial(nameOf(id));
+  if (cls) el.className = cls;
+  return el;
+}
+function renderPeople() {
+  const g = G(), on = online(), inGame = !['lobby', 'end'].includes(g.phase);
+  const locked = g.phase === 'guess' ? lockedOf(g) : [];
+  const ids = [...new Set([...g.order, ...on])];
+  $('people').replaceChildren(...ids.map(id => {
+    const d = document.createElement('div');
+    d.className = 'av' + (id === me ? ' me' : '') + (on.includes(id) ? '' : ' off');
+    d.title = nameOf(id);
+    d.append(avatarEl(id));
+    const nm = document.createElement('small'); nm.textContent = id === me ? '我' : nameOf(id); d.append(nm);
+    if (inGame && id === g.psychic) { const b = document.createElement('span'); b.className = 'bd psy'; b.innerHTML = ICON_EYE; d.append(b); }
+    else if (locked.includes(id)) { const b = document.createElement('span'); b.className = 'bd ok'; b.innerHTML = ICON_OK; d.append(b); }
+    if (g.mode === 'pk' && g.phase !== 'lobby') { const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = String(g.scores[id] || 0); d.append(sc); }
+    return d;
   }));
-  const n = on.length;
-  text($('startHint'), n < 2 ? '至少要 2 個人才能開始。朋友連進來可能要等幾秒。' : `目前 ${n} 人在房間裡，人到齊就可以開始。`);
-  $('startBtn').disabled = n < 2;
+}
+function renderSeg(box, cur, enabled) {
+  box.replaceChildren(...[1, 2, 3, 4, 5].map(n => {
+    const b = document.createElement('button');
+    b.textContent = String(n); b.setAttribute('aria-pressed', String(n === cur));
+    b.disabled = !enabled;
+    b.onclick = () => (box.id === 'perPick' ? (wantPer = n, store.set('wl:per', String(n)), renderSeg(box, n, true)) : setPer(n));
+    return b;
+  }));
+}
+function renderWheel() {
+  const g = G(), amPsy = g.psychic === me;
+  let showT = null, needles = [];
+  if (g.phase === 'reveal') {
+    showT = g.target;
+    needles = Object.entries(g.guesses).map(([id, v]) => ({ v, color: colorOf(id), label: initial(nameOf(id)) }));
+  } else if (amPsy) {
+    showT = mySecret(g);
+    if (g.phase === 'guess' && g.mode === 'coop') needles = [{ v: dial.get(), color: colorOf(online().find(id => id !== me) || me) }];
+  } else if (g.phase === 'guess') {
+    const lk = myLock(g);
+    needles = [{ v: lk ?? localDial, color: colorOf(me), label: lk != null ? initial(nameOf(me)) : '' }];
+  }
+  drawWheel(g, showT, needles);
+  $('wheel').setAttribute('aria-valuenow', String(Math.round(localDial)));
+  $('wheel').classList.toggle('drag', canDrag());
 }
 function render() {
   if (!room) return;
-  const g = G(), amPsy = g.psychic === me, on = online();
+  const g = G(), amPsy = g.psychic === me, on = online(), n = on.length;
   const inGame = !['lobby', 'end'].includes(g.phase);
   $('lobbyBox').classList.toggle('hide', g.phase !== 'lobby');
   $('playBox').classList.toggle('hide', !inGame);
   $('endBox').classList.toggle('hide', g.phase !== 'end');
-  text($('roundTxt'), inGame ? `第 ${g.round} / ${ROUNDS} 回合` : g.phase === 'end' ? '遊戲結束' : '大廳');
-  text($('scoreTxt'), g.phase === 'lobby' ? '' : `總分 ${g.score}`);
-  renderPlayers();
+  text($('roundTxt'), inGame ? `${g.round} / ${g.total}` : '');
+  text($('scoreTxt'), inGame ? (g.mode === 'coop' ? `隊伍 ${g.score} 分` : `我 ${g.scores[me] || 0} 分`) : '');
+  renderPeople();
 
+  if (g.phase === 'lobby') {
+    $('mCoop').classList.toggle('on', n <= 2); $('mPk').classList.toggle('on', n > 2);
+    renderSeg($('perLobby'), g.per || 2, g.host === me || !g.host);
+    text($('startHint'), n < 2 ? '等朋友加入…' : `${n} 人 × ${g.per || 2} 題 = ${n * (g.per || 2)} 回合`);
+    $('startBtn').disabled = n < 2;
+  }
   if (inGame) {
+    const key = g.gid + ':' + g.round;
+    if (key !== dialKey) { dialKey = key; localDial = 90; }
     const c = CARDS[g.card] || ['', ''];
-    $('leftEnd').innerHTML = '<small>左端</small>'; $('leftEnd').append(c[0]);
-    $('rightEnd').innerHTML = '<small>右端</small>'; $('rightEnd').append(c[1]);
-    if (!dragging) localDial = g.phase === 'reveal' || g.phase === 'locked' ? (g.guess ?? dial.get()) : dial.get();
-    drawWheel(g, localDial);
-    $('wheel').classList.toggle('drag', canDrag());
+    text($('leftEnd'), c[0]); text($('rightEnd'), c[1]);
+    renderWheel();
     const clue = $('clueTxt'); clue.replaceChildren();
-    if (g.clue) { const sm = document.createElement('small'); sm.textContent = `${nameOf(g.psychic)} 的線索`; clue.append(sm, g.clue); }
+    if (g.clue) clue.append(g.clue);
     $('clueForm').classList.toggle('hide', !(g.phase === 'clue' && amPsy));
-    $('ptsTxt').classList.toggle('hide', g.phase !== 'reveal');
-    if (g.phase === 'reveal') text($('ptsTxt'), g.pts ? `+${g.pts} 分` : '沒中，0 分');
-    const psyOn = on.includes(g.psychic);
-    const say = {
-      clue: amPsy ? '看看目標區落在哪，想一個線索讓大家把指針轉過去。' : `等 ${nameOf(g.psychic)} 想線索…`,
-      guess: amPsy ? '大家正在轉指針，你只能看不能說。' : '拖動轉盤上的指針，大家討論好再鎖定。',
-      locked: amPsy ? '揭曉中…' : `答案鎖定，等 ${nameOf(g.psychic)} 揭曉…`,
-      reveal: '紅色中心就是目標，看看差多少。',
-    }[g.phase] || '';
-    text($('sayTxt'), !psyOn && !amPsy && g.phase !== 'reveal' ? `${nameOf(g.psychic)} 離線了，可以跳過這題。` : say);
+    const psyOn = on.includes(g.psychic), locked = lockedOf(g), need = guessersOf(g);
+    let say = '';
+    if (g.phase === 'clue') say = amPsy ? '給一個線索' : `${nameOf(g.psychic)} 想線索中…`;
+    if (g.phase === 'guess') say = amPsy ? `${locked.length} / ${need.length} 已作答` : myLock(g) != null ? `等其他人 ${locked.length} / ${need.length}` : (g.mode === 'pk' ? '拖指針，各自作答' : '拖指針');
+    if (!psyOn && !amPsy && g.phase !== 'reveal') say = `${nameOf(g.psychic)} 離線了`;
+    text($('sayTxt'), say);
+    // 揭曉結果
+    const res = $('resBox');
+    res.classList.toggle('hide', g.phase !== 'reveal');
+    if (g.phase === 'reveal') {
+      const chip = (id, pts, psy) => {
+        const d = document.createElement('div'); if (!pts) d.className = 'zero';
+        d.append(avatarEl(id)); d.append((psy ? '出題 ' : '') + '+' + pts); return d;
+      };
+      res.replaceChildren(...Object.entries(g.results).map(([id, p]) => chip(id, p)), ...(g.mode === 'pk' ? [chip(g.psychic, g.psyPts, true)] : []));
+    }
     const act = $('actBox'); act.replaceChildren();
     const btn = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; act.append(b); };
-    if (g.phase === 'clue' && amPsy) btn('換一張題目', rerollCard, 'ghost small');
-    if (g.phase === 'guess' && !amPsy) btn('鎖定答案', lockGuess);
-    if (g.phase === 'reveal') btn(g.round >= ROUNDS ? '看總結' : '下一回合', nextRound);
-    if (!psyOn && !amPsy && (g.phase === 'clue' || g.phase === 'guess' || g.phase === 'locked')) btn('跳過這題', nextRound, 'ghost small');
+    if (g.phase === 'clue' && amPsy) btn('換題', rerollCard, 'ghost small');
+    if (g.phase === 'guess' && !amPsy && myLock(g) == null) btn('鎖定', lockGuess);
+    if (g.phase === 'guess' && amPsy && locked.length && locked.length < need.length) btn('直接揭曉', () => revealIfPsychic(true), 'ghost small');
+    if (g.phase === 'reveal') btn(g.round >= g.total ? '看結果' : '下一題', nextRound);
+    if (!psyOn && !amPsy && g.phase !== 'reveal') btn('跳過', nextRound, 'ghost small');
   }
   if (g.phase === 'end') {
-    text($('finalTxt'), `${g.score} / ${ROUNDS * 4}`);
-    text($('rankTxt'), rank(g.score));
-    $('logList').replaceChildren(...g.log.map(l => {
-      const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
-      const c = CARDS[l.card] || ['', ''];
-      a.textContent = `${l.r}. ${c[0]}↔${c[1]}「${l.clue}」（${l.by}）`;
-      b.textContent = `${l.pts} 分`;
-      li.append(a, b); return li;
-    }));
+    const pod = $('podium');
+    if (g.mode === 'coop') {
+      text($('finalTxt'), `${g.score} / ${g.total * 4}`);
+      text($('rankTxt'), rank(g.score, g.total * 4));
+      pod.replaceChildren();
+    } else {
+      const ranked = [...new Set([...g.order, ...Object.keys(g.scores)])].sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
+      const top = g.scores[ranked[0]] || 0, winners = ranked.filter(id => (g.scores[id] || 0) === top);
+      text($('finalTxt'), winners.map(nameOf).join('、'));
+      text($('rankTxt'), winners.length > 1 ? '平手' : '冠軍');
+      pod.replaceChildren(...ranked.map((id, i) => {
+        const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
+        a.append(String(i + 1), avatarEl(id), nameOf(id)); b.textContent = `${g.scores[id] || 0} 分`;
+        li.append(a, b); return li;
+      }));
+    }
+    renderSeg($('perLobby'), g.per || 2, true);
   }
-  revealIfPsychic();
+  revealIfPsychic(false);
 }
 let seen = null, joinedAt = Date.now(), unread = 0, lanes = [0, 0, 0, 0, 0];
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -488,7 +596,7 @@ function newCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.
 function hashCode() { const h = location.hash.slice(1).toUpperCase(); return /^[A-Z0-9]{4,6}$/.test(h) ? h : ''; }
 function roomLink() { return location.href.split('#')[0] + '#' + code; }
 
-async function enter(c) {
+async function enter(c, creating = false) {
   const name = $('nameIn').value.trim();
   if (!name) { text($('joinErr'), '先輸入暱稱'); $('nameIn').focus(); return; }
   store.set('wl:name', name);
@@ -502,17 +610,20 @@ async function enter(c) {
   dial = room.makeState('dial', 90);
   profile = room.makeUserState('profile', { name });
   chat = room.makeUserState('chat', []);
+  guessSt = room.makeUserState('guess', null);
   await profile.set({ name });
-  game.onChange(render); dial.onChange(() => { if (!dragging) render(); });
+  game.onChange(render); guessSt.onChange(render);
+  dial.onChange(() => { if (!dragging && G().psychic === me) renderWheel(); });
   profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
   room.onUserJoin(() => render()); room.onUserLeave(() => render());
   room.onError(e => text($('netTxt'), '連線問題：' + (e && e.code ? e.code : '請重新整理')));
   $('joinView').classList.add('hide');
-  ['gameView', 'peopleView', 'chatBar'].forEach(id => $(id).classList.remove('hide'));
+  ['gameView', 'people', 'chatBar'].forEach(id => $(id).classList.remove('hide'));
   $('roomChip').classList.remove('hide'); text($('roomChip'), '房號 ' + code);
   text($('shareTxt'), roomLink());
   text($('netTxt'), params.has('local') ? '本機測試模式' : '瀏覽器直連，不經過伺服器。少數公司網路可能連不上，換手機網路試試。');
   render(); renderChat();
+  if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer }));
 }
 
 $('nameIn').value = store.get('wl:name') || '';
@@ -523,13 +634,14 @@ function showJoin() {
   text($('hashCode'), h);
 }
 showJoin();
-$('createBtn').onclick = () => enter(newCode());
+$('createBtn').onclick = () => enter(newCode(), true);
+renderSeg($('perPick'), wantPer, true);
 $('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { text($('joinErr'), '房號是 4 碼英數字'); return; } enter(c); };
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinCodeBtn').click(); });
 $('joinHashBtn').onclick = () => enter(hashCode());
 $('otherBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); showJoin(); };
 $('startBtn').onclick = startGame;
-$('againBtn').onclick = startGame;
+$('againBtn').onclick = async () => { await game.set(p => ({ ...initialGame, host: p.host, per: p.per, phase: 'lobby' })); };
 $('clueBtn').onclick = sendClue;
 $('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
 $('copyBtn').onclick = async () => {
@@ -562,7 +674,7 @@ fitViewport();
 const wheel = $('wheel');
 wheel.addEventListener('pointerdown', e => { if (!canDrag()) return; dragging = true; wheel.setPointerCapture(e.pointerId); pushDial(angleFromEvent(e)); });
 wheel.addEventListener('pointermove', e => { if (dragging) pushDial(angleFromEvent(e)); });
-const endDrag = () => { if (!dragging) return; dragging = false; dial.set(Math.round(localDial)); };
+const endDrag = () => { if (!dragging) return; dragging = false; if (G().mode === 'coop') dial.set(Math.round(localDial)); };
 wheel.addEventListener('pointerup', endDrag); wheel.addEventListener('pointercancel', endDrag);
 wheel.addEventListener('keydown', e => {
   if (!canDrag()) return;

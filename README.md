@@ -8,7 +8,7 @@
 
 | 遊戲 | 網址 | 玩法 |
 | --- | --- | --- |
-| 同頻轉盤 | https://josephinezulin.github.io/My-Games/wavelength/ | 線上多人版 Wavelength：一人看目標區給線索，其他人轉指針，輪流出題，共 10 回合，附聊天室 |
+| 同頻轉盤 | https://josephinezulin.github.io/My-Games/wavelength/ | 線上多人版 Wavelength：2 人合作、3 人以上對戰，建房時選每人出題次數，附聊天室與彈幕 |
 | 色塊脫逃 | https://josephinezulin.github.io/My-Games/block/ | 拖動色塊，從相同顏色的出口滑出棋盤。共 50 關，21 關起有石塊與步數限制 |
 | 沙漠王朝 | https://josephinezulin.github.io/My-Games/sultan/ | 橫式卡牌遊戲：把蘇丹卡、人物、金幣與物品放進儀式，七天內完成旨意，有支線與多重結局 |
 | 落球作戰 | https://josephinezulin.github.io/My-Games/bounce/ | 倒出彈珠穿過倍增門，把足夠的彈珠接進杯子。共 30 關 |
