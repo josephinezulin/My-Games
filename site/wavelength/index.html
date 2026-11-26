@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content">
 <title>同頻轉盤</title>
 <meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高，附聊天室。">
 <style>
@@ -14,15 +14,40 @@
   :root { --bg: #0e3b3d; --bg2: #13494b; --panel: #fbf4e6; --ink: #1f2a2b; --muted: #6b7778; --line: #e6dcc8;
           --z2: #f4c542; --z3: #f28c38; --z4: #e2483d; --accent: #e2483d; --ok: #2f8f6a; }
   * { box-sizing: border-box; min-width: 0; }
-  html, body { margin: 0; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body { background: var(--bg); color: var(--panel); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
-         min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: clip; }
+         height: var(--app-h, 100dvh); display: flex; flex-direction: column; align-items: center; overflow-x: clip; }
   nav.games { width: 100%; max-width: 520px; padding: 10px 16px 0; font-size: 14px; display: flex; align-items: center; gap: 10px; }
   nav.games a.home { display: inline-flex; align-items: center; gap: 4px; color: var(--panel); text-decoration: none; font-weight: 700; padding: 6px 8px 6px 2px; }
   header { width: 100%; max-width: 520px; padding: 2px 16px 8px; display: flex; align-items: center; gap: 10px; }
   h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px; flex: 1; }
   .chip { background: var(--bg2); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; white-space: nowrap; }
-  main { width: 100%; max-width: 520px; padding: 0 12px 24px; display: flex; flex-direction: column; gap: 12px; }
+  nav.games, header { flex: none; }
+  .stage { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 520px; }
+  main { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* 底部固定輸入列 */
+  #chatBar { flex: none; width: 100%; max-width: 520px; display: flex; gap: 8px; align-items: center;
+             padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); box-shadow: 0 -1px 0 #ffffff1f; }
+  #chatBar input { flex: 1; border-color: transparent; }
+  #chatOpen { position: relative; flex: none; width: 46px; padding: 0; display: grid; place-items: center; background: var(--bg2); box-shadow: none; }
+  #chatOpen[aria-expanded=true] { background: var(--z2); color: var(--ink); }
+  #badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff;
+           font-size: 12px; line-height: 20px; text-align: center; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
+
+  /* 全螢幕聊天室（蓋住遊戲區，輸入列仍在下方） */
+  #chatFull { position: absolute; inset: 0; z-index: 5; background: var(--bg); display: flex; flex-direction: column; padding: 0 12px 8px; }
+  #chatFull .head { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; }
+  #chatFull h2 { margin: 0; font-size: 18px; }
+  #chatClose { background: var(--bg2); box-shadow: none; }
+
+  /* 彈幕 */
+  #danmaku { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
+  #danmaku span { position: absolute; left: 0; white-space: nowrap; font-size: 16px; font-weight: 800; padding: 4px 12px; border-radius: 999px;
+                  background: #102b2ccc; color: #fff; box-shadow: 0 2px 6px #0005; will-change: transform; }
+  #danmaku span b { color: var(--z2); margin-right: 6px; }
+  #danmaku span.me { background: #e2483de6; }
+  #danmaku span.me b { color: #fff; }
   .card { background: var(--panel); color: var(--ink); border-radius: 18px; padding: 16px; box-shadow: 0 6px 0 #0006; }
   .card h2 { margin: 0 0 10px; font-size: 17px; }
   .muted { color: var(--muted); font-size: 14px; }
@@ -60,12 +85,11 @@
   .players span.psy { background: var(--z2); box-shadow: none; }
   .players span.off { opacity: .45; }
 
-  .chat { display: flex; flex-direction: column; gap: 8px; }
-  #msgs { height: 200px; overflow-y: auto; background: #fff; border-radius: 12px; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; font-size: 15px; }
+  #msgs { flex: 1; min-height: 0; overflow-y: auto; background: var(--panel); color: var(--ink); border-radius: 16px; padding: 12px 14px; font-size: 16px; }
   #msgs p { margin: 0 0 6px; overflow-wrap: anywhere; }
   #msgs b { margin-right: 6px; }
   #msgs .me b { color: var(--accent); }
-  #msgs .empty { color: var(--muted); text-align: center; margin-top: 70px; }
+  #msgs .empty { color: var(--muted); text-align: center; margin-top: 30%; }
   .share { word-break: break-all; font-size: 13px; color: var(--muted); }
   .log { font-size: 14px; margin: 8px 0 0; padding: 0; list-style: none; }
   .log li { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding: 5px 0; }
@@ -81,7 +105,8 @@
   <span class="chip hide" id="roomChip"></span>
 </header>
 
-<main>
+<div class="stage">
+<main id="main">
   <!-- 進入畫面 -->
   <section class="card" id="joinView">
     <h2>線上版 Wavelength</h2>
@@ -136,13 +161,19 @@
     <div class="players" id="players"></div>
   </section>
 
-  <section class="card chat hide" id="chatView">
-    <h2 style="margin:0">聊天室</h2>
-    <div id="msgs" aria-live="polite"></div>
-    <form class="row" id="chatForm"><input type="text" id="chatIn" maxlength="200" placeholder="說點什麼…" autocomplete="off"><button>送出</button></form>
-  </section>
   <p class="net" id="netTxt"></p>
 </main>
+<div id="danmaku" aria-hidden="true"></div>
+<section id="chatFull" class="hide" aria-label="聊天室">
+  <div class="head"><h2>聊天室</h2><button class="small" id="chatClose">回到遊戲</button></div>
+  <div id="msgs" aria-live="polite"></div>
+</section>
+</div>
+<form id="chatBar" class="hide">
+  <button type="button" id="chatOpen" aria-label="打開聊天室" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span id="badge" class="hide"></span></button>
+  <input type="text" id="chatIn" maxlength="200" placeholder="說點什麼…" autocomplete="off" enterkeyhint="send">
+  <button>送出</button>
+</form>
 
 <script src="cards.js"></script>
 <script type="module">
@@ -405,15 +436,39 @@ function render() {
   }
   revealIfPsychic();
 }
-function renderChat() {
-  const all = profile ? chat.getAll() : {};
+let seen = null, joinedAt = Date.now(), unread = 0, lanes = [0, 0, 0, 0, 0];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function chatList() {
   const list = [];
-  for (const [id, arr] of Object.entries(all)) for (const m of arr || []) list.push({ ...m, id });
-  list.sort((a, b) => a.t - b.t);
+  for (const [id, arr] of Object.entries(chat ? chat.getAll() : {})) for (const m of arr || []) list.push({ ...m, id, k: id + ':' + m.t });
+  return list.sort((a, b) => a.t - b.t);
+}
+function chatOpen() { return !$('chatFull').classList.contains('hide'); }
+function setUnread(n) { unread = n; $('badge').classList.toggle('hide', !n); text($('badge'), n > 99 ? '99+' : String(n)); }
+function fly(m) {
+  const box = $('danmaku'), W = box.clientWidth, H = box.clientHeight;
+  const now = Date.now();
+  let lane = lanes.indexOf(Math.min(...lanes));
+  const free = lanes.findIndex(t => t < now); if (free !== -1) lane = free;
+  const el = document.createElement('span'), b = document.createElement('b');
+  b.textContent = nameOf(m.id); el.append(b, String(m.x));
+  if (m.id === me) el.className = 'me';
+  el.style.top = (Math.max(8, H * 0.04) + lane * 40) + 'px';
+  box.append(el);
+  const w = el.offsetWidth, dur = 6500 + Math.min(String(m.x).length, 40) * 60;
+  lanes[lane] = now + dur * (w + 40) / (W + w);
+  if (reduceMotion) { el.style.transform = `translateX(${Math.max(8, (W - w) / 2)}px)`; setTimeout(() => el.remove(), 3500); return; }
+  const anim = el.animate([{ transform: `translateX(${W}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, easing: 'linear' });
+  anim.onfinish = () => el.remove();
+}
+function renderChat() {
+  const list = chatList();
+  if (seen === null) seen = new Set(list.map(m => m.k));
+  else for (const m of list) if (!seen.has(m.k)) { seen.add(m.k); if (!chatOpen() && m.t > joinedAt - 3000) { fly(m); if (m.id !== me) setUnread(unread + 1); } }
   const box = $('msgs');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   if (!list.length) { box.innerHTML = '<p class="empty">還沒有訊息，打個招呼吧</p>'; return; }
-  box.replaceChildren(...list.slice(-80).map(m => {
+  box.replaceChildren(...list.slice(-150).map(m => {
     const p = document.createElement('p'), b = document.createElement('b');
     b.textContent = nameOf(m.id);
     if (m.id === me) p.className = 'me';
@@ -421,6 +476,11 @@ function renderChat() {
     return p;
   }));
   if (atBottom || list[list.length - 1].id === me) box.scrollTop = box.scrollHeight;
+}
+function toggleChat(open) {
+  $('chatFull').classList.toggle('hide', !open);
+  $('chatOpen').setAttribute('aria-expanded', String(open));
+  if (open) { setUnread(0); $('danmaku').replaceChildren(); const box = $('msgs'); box.scrollTop = box.scrollHeight; }
 }
 
 // ---------- 進房 ----------
@@ -437,6 +497,7 @@ async function enter(c) {
   text($('joinErr'), '連線中…');
   try { room = await connect(code); } catch (e) { room = null; text($('joinErr'), '連線元件載入失敗，請檢查網路後重新整理。'); return; }
   me = (await room.getSelf()).userId;
+  joinedAt = Date.now();
   game = room.makeState('game', initialGame);
   dial = room.makeState('dial', 90);
   profile = room.makeUserState('profile', { name });
@@ -447,7 +508,7 @@ async function enter(c) {
   room.onUserJoin(() => render()); room.onUserLeave(() => render());
   room.onError(e => text($('netTxt'), '連線問題：' + (e && e.code ? e.code : '請重新整理')));
   $('joinView').classList.add('hide');
-  ['gameView', 'peopleView', 'chatView'].forEach(id => $(id).classList.remove('hide'));
+  ['gameView', 'peopleView', 'chatBar'].forEach(id => $(id).classList.remove('hide'));
   $('roomChip').classList.remove('hide'); text($('roomChip'), '房號 ' + code);
   text($('shareTxt'), roomLink());
   text($('netTxt'), params.has('local') ? '本機測試模式' : '瀏覽器直連，不經過伺服器。少數公司網路可能連不上，換手機網路試試。');
@@ -476,13 +537,27 @@ $('copyBtn').onclick = async () => {
   catch { text($('copyBtn'), '請手動複製上方連結'); }
   setTimeout(() => text($('copyBtn'), '複製邀請連結'), 2000);
 };
-$('chatForm').addEventListener('submit', async e => {
+$('chatBar').addEventListener('submit', async e => {
   e.preventDefault();
   const x = $('chatIn').value.trim();
   if (!x || !chat) return;
   $('chatIn').value = '';
   await chat.set(prev => [...(prev || []), { t: Date.now(), x }].slice(-40));
 });
+
+$('chatOpen').onclick = () => toggleChat(!chatOpen());
+$('chatClose').onclick = () => toggleChat(false);
+
+// 手機鍵盤彈出時，讓整個版面貼齊可見區域，上下列保持固定
+const vv = window.visualViewport;
+function fitViewport() {
+  const h = vv ? vv.height : innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+  if (vv) { document.body.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; }
+}
+if (vv) { vv.addEventListener('resize', fitViewport); vv.addEventListener('scroll', fitViewport); }
+addEventListener('resize', fitViewport);
+fitViewport();
 
 const wheel = $('wheel');
 wheel.addEventListener('pointerdown', e => { if (!canDrag()) return; dragging = true; wheel.setPointerCapture(e.pointerId); pushDial(angleFromEvent(e)); });
