@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <title>同頻轉盤</title>
-<meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高，附聊天室。">
+<meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高。可連線開房，也可以一支手機輪流玩。">
 <style>
-  /* VOICE  熱鬧的派對桌遊，介面用圖示說話，文字越少越好
+  /* VOICE  熱鬧的派對桌遊：首頁與設定畫面用文字說清楚，遊戲中盡量用圖示
      IDEA   實體桌遊的半圓轉盤與擋板
      PICTURE 轉盤本身就是主畫面，整頁固定不捲動
      COLOUR 深青底、奶油色盤面、黃橘紅得分區
-     LAYOUT 上：首頁、房號、頭像列｜中：遊戲卡（轉盤自動縮放）｜下：聊天輸入列 */
+     LAYOUT 上：首頁、房名、頭像列｜中：遊戲卡｜下：聊天輸入列 */
   :root { --bg: #0e3b3d; --bg2: #13494b; --panel: #fbf4e6; --ink: #1f2a2b; --muted: #6b7778; --line: #e6dcc8;
           --z2: #f4c542; --z3: #f28c38; --z4: #e2483d; --accent: #e2483d; --gold: #f4c542; }
   * { box-sizing: border-box; min-width: 0; }
@@ -20,59 +20,51 @@
          padding-top: env(safe-area-inset-top); -webkit-user-select: none; user-select: none; touch-action: manipulation; }
   input { -webkit-user-select: text; user-select: text; }
   svg { display: block; }
+  .hide { display: none !important; }
 
   /* 上方列 */
   .top { flex: none; width: 100%; max-width: 520px; display: flex; align-items: center; gap: 8px; padding: 8px 12px 6px; }
-  .top a.home { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: var(--panel); background: var(--bg2); }
-  h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 1px; flex: 1; white-space: nowrap; }
+  .top a.home { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: var(--panel); background: var(--bg2); }
+  h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 1px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg2); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 800; white-space: nowrap; letter-spacing: 1px; }
+  button.chip { min-height: 40px; color: var(--panel); box-shadow: none; }
 
-  /* 玩家頭像列 */
-  #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 12px; overflow-x: auto; padding: 10px 14px 8px; scrollbar-width: none; }
+  /* 頭像 */
+  .face { display: grid; place-items: center; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; line-height: 1; letter-spacing: -1px; overflow: hidden; white-space: nowrap; }
+  .face.emo { font-size: 1.15em; letter-spacing: 0; }
+  #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 12px; overflow-x: auto; padding: 14px 14px 8px; scrollbar-width: none; }
   #people::-webkit-scrollbar { display: none; }
-  .av { position: relative; flex: none; width: 52px; text-align: center; }
-  .av > i { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; font-style: normal;
-            font-size: 19px; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px var(--bg); transition: box-shadow .25s; }
-  .av.me > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #ffffff99; }
-  .av.psy > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--gold), 0 0 14px 4px #f4c54266; }
+  .av { position: relative; flex: none; width: 54px; display: flex; flex-direction: column; align-items: center; gap: 0; text-align: center; background: none; border: 0; border-radius: 0; padding: 0; color: inherit; font: inherit; font-weight: 700; min-height: 0; box-shadow: none; cursor: pointer; }
+  .av small { width: 100%; }
+  .av:active { transform: none; }
+  .av > .face { width: 46px; height: 46px; margin: 0 auto; font-size: 16px; box-shadow: 0 0 0 3px var(--bg); transition: box-shadow .25s, filter .25s, opacity .25s; }
+  .av > .face.one { font-size: 20px; }
+  .av > .face.emo { font-size: 26px; }
+  .av.me > .face { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #ffffffaa; }
+  .av.off > .face { filter: grayscale(1); opacity: .45; }
   .av.off small { opacity: .5; }
   .av small { display: block; font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .av .crown { position: absolute; top: -13px; left: 50%; transform: translateX(-50%) rotate(-8deg); color: var(--gold); filter: drop-shadow(0 1px 0 #0008); }
-  .av .ok { position: absolute; top: -3px; right: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #3ddc97; color: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
-  .av .sc { position: absolute; top: 30px; right: -2px; min-width: 22px; height: 18px; border-radius: 9px; background: var(--panel); color: var(--ink);
+  .av .crown { position: absolute; top: -15px; left: 50%; transform: translateX(-50%) rotate(-8deg); color: var(--gold); filter: drop-shadow(0 1px 0 #0008); }
+  .av .crown.drop { animation: crownDrop .6s cubic-bezier(.3,1.4,.5,1) backwards; }
+  .av .pen, .av .ok { position: absolute; top: -3px; right: 0; width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+  .av .pen { background: var(--z2); color: var(--ink); }
+  .av .ok { background: #3ddc97; color: var(--ink); }
+  .av .lost { position: absolute; top: 30px; left: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--bg); }
+  .av .sc { position: absolute; top: 31px; right: -2px; min-width: 22px; height: 18px; border-radius: 9px; background: var(--panel); color: var(--ink);
             font-size: 12px; font-weight: 900; line-height: 18px; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
+  .pop { animation: pop .35s cubic-bezier(.3,1.5,.5,1) backwards; }
+  .bump { animation: bump .45s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
+  @keyframes bump { 40% { transform: scale(1.5); } }
+  @keyframes crownDrop { from { transform: translate(-50%, -26px) rotate(-30deg); opacity: 0; } }
 
-  /* 中間舞台：固定高度，不捲動 */
+  /* 舞台：固定高度，不捲動 */
   .stage { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 520px; }
-  main { height: 100%; display: flex; flex-direction: column; padding: 2px 12px 10px; }
+  main { height: 100%; display: flex; flex-direction: column; padding: 2px 12px 10px; overflow: hidden; }
   .card { background: var(--panel); color: var(--ink); border-radius: 20px; padding: 14px; box-shadow: 0 5px 0 #0006; }
-  #gameView { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  #joinView { max-height: 100%; display: flex; flex-direction: column; min-height: 0; }
-  #gameView, main { overflow: hidden; }
-
-  /* 公開房間列表 */
-  .rooms { flex: 1; min-height: 72px; overflow-y: auto; margin: 0 -4px; padding: 2px 4px; display: flex; flex-direction: column; gap: 8px; }
-  .rooms .none { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #cbbfa8; font-weight: 800; font-size: 13px; }
-  button.room { width: 100%; justify-content: flex-start; gap: 10px; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); padding: 8px 12px; min-height: 56px; animation: pop .3s backwards; }
-  button.room:active { box-shadow: inset 0 0 0 2px var(--z3); }
-  .room .code { font-size: 17px; letter-spacing: 2px; font-weight: 900; }
-  .room .faces { display: flex; flex: 1; }
-  .room .faces i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 12px; font-weight: 900; margin-left: -6px; box-shadow: 0 0 0 2px #fff; }
-  .room .faces i:first-child { margin-left: 0; }
-  .room .st { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 900; color: var(--muted); white-space: nowrap; }
-  .room .st.live { color: var(--accent); }
-  .room .go { color: var(--muted); }
-  .sect { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 900; margin: 12px 0 8px; }
-  .sect::after { content: ""; flex: 1; height: 2px; background: var(--line); border-radius: 1px; }
-  .priv { display: flex; gap: 6px; }
-  .priv button { flex: 1; min-height: 44px; background: #fff; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line); }
-  .priv button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
-  .priv button:disabled { opacity: 1; } .priv button:disabled[aria-pressed=false] { opacity: .45; }
-
-  /* 輸入線索時：只留轉盤和線索框 */
-  body.typing #chatBar, body.typing #people, body.typing .top, body.typing .status, body.typing .say, body.typing #actBox, body.typing .clue { display: none !important; }
-  body.typing .wheelbox { min-height: 0; }
-  body.chatting #people { display: none; }
+  .view { max-height: 100%; display: flex; flex-direction: column; min-height: 0; }
+  #gameView { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .scroll-y { overflow-y: auto; min-height: 0; }
 
   input[type=text] { width: 100%; font-size: 16px; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
   input[type=text]:focus { outline: none; border-color: var(--z3); }
@@ -81,31 +73,59 @@
   button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0004; }
   button.ghost { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
   button.small { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+  button.icon { width: 44px; padding: 0; flex: none; }
   button:disabled { opacity: .45; cursor: default; }
   button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--z2); outline-offset: 2px; }
   .row { display: flex; gap: 8px; align-items: center; }
   .row > input { flex: 1; }
-  .hide { display: none !important; }
-  .gap { height: 12px; flex: none; }
+  .intro { margin: 0 0 12px; font-size: 15px; color: var(--muted); font-weight: 700; line-height: 1.5; }
+  .lbl { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 900; margin: 14px 0 6px; }
+  .lbl small { font-weight: 700; color: var(--muted); font-size: 13px; }
+  .hint { margin: 6px 0 0; font-size: 13px; color: var(--muted); font-weight: 700; line-height: 1.5; }
+  .vhead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .vhead h2 { margin: 0; font-size: 19px; font-weight: 900; }
+  .vhead button { width: 40px; min-height: 40px; padding: 0; }
+  .sect { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 900; margin: 14px 0 8px; }
+  .sect::after { content: ""; flex: 1; height: 2px; background: var(--line); border-radius: 1px; }
 
-  .seg { display: flex; gap: 6px; align-items: center; }
-  .seg .ic { flex: none; width: 36px; display: grid; place-items: center; color: var(--muted); }
-  .seg button { flex: 1; min-height: 44px; padding: 0; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
-  .seg button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
-  .seg button:disabled { opacity: 1; }
-  .seg button:disabled[aria-pressed=false] { opacity: .45; }
+  /* 加減鈕 */
+  .stepper { display: flex; align-items: center; gap: 10px; }
+  .stepper button { width: 46px; min-height: 46px; padding: 0; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); font-size: 22px; }
+  .stepper output { flex: 1; text-align: center; font-size: 20px; font-weight: 900; }
+  .stepper output small { font-size: 14px; color: var(--muted); margin-left: 2px; }
+  .seg2 { display: flex; gap: 6px; }
+  .seg2 button { flex: 1; min-height: 44px; background: #fff; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line); }
+  .seg2 button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
+  .ro button:disabled { opacity: 1; } .ro button:disabled[aria-pressed=false] { opacity: .4; }
+  .ro .stepper button { visibility: hidden; }
 
-  /* 大廳 */
-  #lobbyBox { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
-  .mode { display: flex; gap: 10px; justify-content: center; }
-  .mode span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-weight: 800; font-size: 15px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); }
+  /* 首頁：公開房間 */
+  .rooms { flex: 1; min-height: 64px; overflow-y: auto; margin: 0 -4px; padding: 2px 4px; display: flex; flex-direction: column; gap: 8px; }
+  .rooms .none { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #b9ad97; font-weight: 800; font-size: 13px; text-align: center; padding: 6px; }
+  button.room { width: 100%; justify-content: flex-start; gap: 10px; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); padding: 8px 12px; min-height: 58px; text-align: left; }
+  .room .nm { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+  .room .nm b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .room .nm span { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+  .room .faces { display: flex; }
+  .room .faces .face { width: 28px; height: 28px; font-size: 11px; margin-left: -7px; box-shadow: 0 0 0 2px #fff; }
+  .room .faces .face.emo { font-size: 16px; }
+  .room .faces .face:first-child { margin-left: 0; }
+  .room .st { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 900; color: var(--muted); white-space: nowrap; }
+  .room .st.live { color: var(--accent); }
+
+  /* 大廳（房內等待） */
+  #lobbyBox { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0; }
+  .roomTitle { text-align: center; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 2px; overflow-wrap: anywhere; }
+  .mode { display: flex; gap: 8px; justify-content: center; }
+  .mode span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 14px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); }
   .mode span.on { background: var(--ink); color: #fff; box-shadow: none; }
-  .eq { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 24px; font-weight: 900; color: var(--ink); }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .grid2 .lbl { margin-top: 0; }
+  .eq { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 22px; font-weight: 900; color: var(--ink); }
   .eq span { display: inline-flex; align-items: center; gap: 4px; }
-  .eq .op { color: var(--muted); font-size: 20px; }
-  .eq .wait { font-size: 16px; color: var(--muted); }
-  .eq .wait i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 2px; animation: blink 1.2s infinite; }
-  .eq .wait i:nth-child(2) { animation-delay: .2s; } .eq .wait i:nth-child(3) { animation-delay: .4s; }
+  .eq .op { color: var(--muted); font-size: 18px; }
+  .wait i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 2px; animation: blink 1.2s infinite; }
+  .wait i:nth-child(2) { animation-delay: .2s; } .wait i:nth-child(3) { animation-delay: .4s; }
   @keyframes blink { 50% { opacity: .2; } }
   .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
@@ -113,58 +133,72 @@
   .status { flex: none; display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 14px; color: var(--muted); }
   .prog { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
   .prog i { display: block; height: 100%; background: var(--z3); border-radius: 3px; transition: width .4s; }
-  .team { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
+  .team, .tmr { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); white-space: nowrap; }
+  .tmr.low { color: var(--accent); animation: blink .8s infinite; }
   #playBox { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .wheelbox { position: relative; flex: 1; min-height: 70px; margin-top: 6px; }
   #wheel { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
   #wheel.drag { cursor: grab; }
   #wheel:focus { outline: none; }
-  .ends { flex: none; display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; }
-  .ends div { flex: 1; display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 16px; padding: 7px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); line-height: 1.25; }
+  .ends { flex: none; display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; perspective: 600px; }
+  .ends div { flex: 1; display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 16px; padding: 7px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); line-height: 1.25; backface-visibility: hidden; }
   .ends div:last-child { justify-content: flex-end; text-align: right; }
   .ends svg { flex: none; color: var(--muted); }
+  .ends.flip div { animation: flip .55s cubic-bezier(.3,1.3,.5,1) backwards; }
+  .ends.flip div:last-child { animation-delay: .08s; }
+  @keyframes flip { from { transform: rotateX(90deg); opacity: .2; } }
   .clue { flex: none; text-align: center; font-size: 22px; font-weight: 900; margin: 8px 0 0; min-height: 32px; overflow-wrap: anywhere; line-height: 1.3; }
   .clue:empty { min-height: 0; margin: 0; }
-  .say { flex: none; text-align: center; font-weight: 800; color: var(--muted); margin: 6px 0 0; font-size: 15px; min-height: 22px; }
+  .clue.bounce { animation: bounceIn .55s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes bounceIn { from { transform: scale(.3) translateY(10px); opacity: 0; } }
+  .say { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; font-weight: 800; color: var(--muted); margin: 6px 0 0; font-size: 15px; min-height: 24px; }
+  .say .face { width: 24px; height: 24px; font-size: 10px; }
+  .say .face.emo { font-size: 14px; }
   #clueForm { flex: none; margin-top: 8px; }
-  .res { flex: none; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-  .res div { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 900; animation: pop .35s backwards; }
-  .res div i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; }
-  .res div.zero { opacity: .5; }
-  .res div svg { color: #c99a10; }
-  #actBox { flex: none; margin-top: 8px; }
-  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+  .res { flex: none; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; min-height: 36px; }
+  .res > div { position: relative; display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 900; }
+  .res .face { width: 28px; height: 28px; font-size: 11px; }
+  .res .face.emo { font-size: 16px; }
+  .res > div.zero { opacity: .5; }
+  .res svg { color: #c48a12; }
+  .bonus { display: inline-flex; align-items: center; gap: 3px; margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: var(--z2); color: var(--ink); font-size: 13px; animation: burst .6s cubic-bezier(.3,1.7,.5,1) backwards; }
+  .bonus.top { background: var(--accent); color: #fff; }
+  @keyframes burst { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.3) rotate(6deg); } }
+  #actBox { flex: none; margin-top: 8px; min-height: 0; }
+  .fly { position: fixed; z-index: 30; font-weight: 900; font-size: 20px; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 10px; pointer-events: none; box-shadow: 0 4px 10px #0006; }
 
   /* 結算 */
   #endBox { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-  .winner { flex: none; text-align: center; font-size: 30px; font-weight: 900; line-height: 1.2; min-height: 40px; margin-top: 4px; }
+  .winner { flex: none; text-align: center; font-size: 30px; font-weight: 900; line-height: 1.2; min-height: 40px; margin-top: 4px; opacity: 0; }
   .winner small { display: block; font-size: 15px; color: var(--muted); }
-  .podium { flex: 1; min-height: 150px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; padding: 0 4px; }
-  .pcol { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-  .pcol .who { position: relative; text-align: center; margin-bottom: 6px; opacity: 0; }
-  .pcol .who i { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; margin: 0 auto; color: #fff; font-style: normal; font-size: 22px; font-weight: 900; box-shadow: 0 0 0 3px #fff; }
-  .pcol.first .who i { width: 64px; height: 64px; font-size: 26px; box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--gold); }
-  .pcol .who small { display: block; font-weight: 800; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
-  .pcol .crown { position: absolute; top: -26px; left: 50%; color: var(--gold); opacity: 0; filter: drop-shadow(0 2px 0 #0004); }
-  .pcol .bar { width: 100%; border-radius: 12px 12px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; color: #fff; font-weight: 900; transform-origin: bottom; transform: scaleY(0); }
+  .podium-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 118px; }
+  .podium { flex: 1; min-height: 90px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 4px; }
+  .pcol { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+  .pcol .who { position: absolute; left: 50%; bottom: calc(var(--h) + 6px); transform: translateX(-50%); text-align: center; opacity: 0; width: 100%; }
+  .pcol .who .face { width: 54px; height: 54px; margin: 0 auto; font-size: 18px; box-shadow: 0 0 0 3px #fff; }
+  .pcol .who .face.emo { font-size: 30px; }
+  .pcol.first .who .face { width: 64px; height: 64px; font-size: 22px; box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--gold); }
+  .pcol.first .who .face.emo { font-size: 36px; }
+  .pcol .who small { display: block; font-weight: 800; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pcol .crown { position: absolute; top: -28px; left: 50%; color: var(--gold); opacity: 0; filter: drop-shadow(0 2px 0 #0004); }
+  .pcol .bar { height: var(--h); width: 100%; border-radius: 12px 12px 4px 4px; display: flex; flex-direction: column; align-items: center; padding-top: 8px; color: #fff; font-weight: 900; transform-origin: bottom; transform: scaleY(0); }
   .pcol .bar b { font-size: 26px; line-height: 1; }
-  .pcol .bar span { display: inline-flex; align-items: center; gap: 3px; font-size: 15px; opacity: .95; margin-top: 4px; }
-  .pcol.first .bar { height: 100%; background: linear-gradient(#f4c542, #e0a51e); color: var(--ink); }
-  .pcol.second .bar { height: 72%; background: linear-gradient(#b8c4c9, #8fa0a8); }
-  .pcol.third .bar { height: 52%; background: linear-gradient(#e09a62, #c0703a); }
-  .podium-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 30px; }
+  .pcol .bar span { display: inline-flex; align-items: center; gap: 3px; font-size: 15px; margin-top: 4px; }
+  .pcol.first .bar { background: linear-gradient(#f4c542, #e0a51e); color: var(--ink); }
+  .pcol.second .bar { background: linear-gradient(#b8c4c9, #8fa0a8); }
+  .pcol.third .bar { background: linear-gradient(#e09a62, #c0703a); }
   .rest { flex: none; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
   .rest div { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; }
-  .rest i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 12px; }
+  .rest .face { width: 26px; height: 26px; font-size: 10px; }
   .coopEnd { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
   .coopEnd .big { font-size: 56px; font-weight: 900; line-height: 1; }
   .coopEnd .stars { display: flex; gap: 6px; color: var(--line); }
   .coopEnd .stars svg.on { color: var(--gold); }
-  #againBtn { flex: none; margin: 10px auto 0; opacity: 0; position: relative; z-index: 4; }
+  .againBtn { flex: none; margin: 10px auto 0; opacity: 0; position: relative; z-index: 4; }
   .shown { animation: fadeIn .4s forwards; }
   @keyframes fadeIn { to { opacity: 1; } }
   @keyframes grow { to { transform: scaleY(1); } }
-  @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(.8); } to { opacity: 1; transform: none; } }
+  @keyframes rise { from { opacity: 0; transform: translate(-50%, 16px) scale(.8); } to { opacity: 1; transform: translateX(-50%); } }
   @keyframes crown { 0% { opacity: 0; transform: translate(-50%, -60px) rotate(-30deg); } 70% { opacity: 1; transform: translate(-50%, 4px) rotate(6deg); } 100% { opacity: 1; transform: translate(-50%, 0) rotate(-6deg); } }
   @keyframes zoom { from { opacity: 0; transform: scale(.4); } 70% { transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
   .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
@@ -178,34 +212,78 @@
   #chatOpen { position: relative; flex: none; width: 46px; padding: 0; background: var(--bg2); box-shadow: none; transition: background .2s, color .2s; }
   #chatOpen[aria-expanded=true] { background: var(--z2); color: var(--ink); }
   #badge { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff;
-           font-size: 12px; line-height: 20px; text-align: center; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); animation: pop .3s; }
+           font-size: 12px; line-height: 20px; text-align: center; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
 
-  /* 聊天視窗：浮在遊戲上方 */
+  /* 浮動視窗：聊天、彈窗 */
   #scrim { position: absolute; inset: 0; z-index: 6; background: #061b1c99; opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
-  #chatWin { position: absolute; left: 10px; right: 10px; top: 4px; bottom: 10px; z-index: 7; background: var(--panel); color: var(--ink);
-             border-radius: 22px; box-shadow: 0 18px 40px #000a; display: flex; flex-direction: column; overflow: hidden;
-             transform-origin: 24px calc(100% + 30px); transform: translateY(30px) scale(.6); opacity: 0; visibility: hidden;
-             transition: transform .34s cubic-bezier(.2, .9, .3, 1.15), opacity .2s, visibility 0s .34s; }
-  .chat-on #scrim { opacity: 1; visibility: visible; transition: opacity .25s; }
-  .chat-on #chatWin { transform: none; opacity: 1; visibility: visible; transition: transform .38s cubic-bezier(.2, .9, .3, 1.15), opacity .2s; }
-  #chatClose { position: absolute; top: 10px; right: 10px; z-index: 1; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--ink); color: #fff; box-shadow: none; }
+  .win { position: absolute; left: 10px; right: 10px; z-index: 7; background: var(--panel); color: var(--ink); border-radius: 22px; box-shadow: 0 18px 40px #000a;
+         display: flex; flex-direction: column; overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(30px) scale(.6);
+         transition: transform .34s cubic-bezier(.2, .9, .3, 1.15), opacity .2s, visibility 0s .34s; }
+  .win.on { transform: none; opacity: 1; visibility: visible; transition: transform .38s cubic-bezier(.2, .9, .3, 1.15), opacity .2s; }
+  .scrim-on #scrim { opacity: 1; visibility: visible; transition: opacity .25s; }
+  #chatWin { top: 4px; bottom: 10px; transform-origin: 24px calc(100% + 30px); }
+  #modal { top: 50%; max-height: calc(100% - 20px); transform-origin: 50% 50%; transform: translateY(-50%) scale(.7); }
+  #modal.on { transform: translateY(-50%); }
+  .xbtn { position: absolute; top: 10px; right: 10px; z-index: 1; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--ink); color: #fff; box-shadow: none; }
+  #modalBody { padding: 18px 16px 16px; overflow-y: auto; }
+  #modalBody h3 { margin: 0 48px 12px 0; font-size: 18px; font-weight: 900; }
   #msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 12px; display: flex; flex-direction: column; gap: 8px; -webkit-user-select: text; user-select: text; }
   .msg { display: flex; align-items: flex-end; gap: 8px; max-width: 86%; }
-  .msg > i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; font-weight: 900; }
+  .msg > .face { flex: none; width: 32px; height: 32px; font-size: 12px; }
+  .msg > .face.emo { font-size: 18px; }
   .msg p { margin: 0; padding: 8px 12px; border-radius: 16px 16px 16px 4px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); overflow-wrap: anywhere; }
   .msg.me { align-self: flex-end; flex-direction: row-reverse; }
   .msg.me p { background: var(--accent); color: #fff; box-shadow: none; border-radius: 16px 16px 4px 16px; }
-  .msg.cont > i { visibility: hidden; }
+  .msg.cont > .face { visibility: hidden; }
   .empty { margin: auto; color: var(--line); }
+
+  /* 選頭像、自訂題目、踢人 */
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .animals { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  .animals button { min-height: 48px; padding: 0; font-size: 26px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); }
+  .animals button[aria-pressed=true] { box-shadow: inset 0 0 0 3px var(--accent); background: #fff2ec; }
+  .animals button:disabled { opacity: .25; filter: grayscale(1); }
+  .preview { display: flex; justify-content: center; margin: 4px 0 14px; }
+  .preview .face { width: 72px; height: 72px; font-size: 26px; }
+  .preview .face.one { font-size: 32px; }
+  .preview .face.emo { font-size: 42px; }
+  .cardsList { display: flex; flex-direction: column; gap: 6px; max-height: 38vh; overflow-y: auto; margin-bottom: 10px; }
+  .cardsList div { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 800; }
+  .cardsList div span { flex: 1; overflow-wrap: anywhere; }
+  .cardsList button { width: 34px; min-height: 34px; padding: 0; background: var(--line); color: var(--ink); box-shadow: none; }
+  .kick { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .kick .face { width: 64px; height: 64px; font-size: 22px; }
+  .kick .face.emo { font-size: 36px; }
+  .kick .acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px; }
+  .kick .acts button { flex-direction: column; gap: 2px; min-height: 64px; }
+  .kick .acts small { font-weight: 700; font-size: 12px; opacity: .85; }
+  .players { display: flex; flex-direction: column; gap: 8px; }
+  .players .pl { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 6px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); }
+  .players .pl > button.avbtn { background: none; box-shadow: none; padding: 0; min-height: 0; }
+  .players .pl .face { width: 40px; height: 40px; font-size: 14px; }
+  .players .pl .face.one { font-size: 18px; }
+  .players .pl .face.emo { font-size: 24px; }
+  .players .pl b { flex: 1; }
+  .players .pl .rm { width: 36px; min-height: 36px; padding: 0; background: var(--line); color: var(--ink); box-shadow: none; }
+
+  /* 離線：交接畫面 */
+  #handoff { position: absolute; inset: 0; z-index: 9; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; }
+  #handoff .face { width: 120px; height: 120px; font-size: 40px; box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px var(--panel); animation: pop .5s cubic-bezier(.3,1.5,.5,1); }
+  #handoff .face.one { font-size: 54px; }
+  #handoff .face.emo { font-size: 68px; }
+  #handoff p { margin: 0; font-size: 16px; font-weight: 800; color: #cfe3e2; }
+  #handoff h2 { margin: 0; font-size: 30px; font-weight: 900; }
+  #handoff .role { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--bg2); font-weight: 800; }
+  #handoff button { min-width: 220px; font-size: 18px; min-height: 54px; }
 
   /* 彈幕 */
   #danmaku { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
   #danmaku span { position: absolute; left: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 16px; font-weight: 800;
                   padding: 3px 12px 3px 3px; border-radius: 999px; background: #102b2cd9; color: #fff; box-shadow: 0 2px 8px #0006; will-change: transform; }
-  #danmaku span i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; }
+  #danmaku .face { width: 26px; height: 26px; font-size: 10px; }
+  #danmaku .face.emo { font-size: 15px; }
 
   /* 連線燈與狀態卡 */
-  button.chip { min-height: 40px; color: var(--panel); box-shadow: none; font: inherit; font-weight: 800; font-size: 14px; letter-spacing: 1px; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 0 3px #3ddc9733; transition: background .3s, box-shadow .3s; }
   .dot.warn { background: var(--z2); box-shadow: 0 0 0 3px #f4c54240; animation: pulse 1.2s infinite; }
   .dot.bad { background: var(--accent); box-shadow: 0 0 0 3px #e2483d40; animation: pulse .8s infinite; }
@@ -218,65 +296,107 @@
   #netCard .st { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 17px; }
   #netCard .st .dot { width: 14px; height: 14px; }
   #netCard .peers { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
-  #netCard .peers i { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; font-weight: 900; }
-  #netCard .peers i.lost { filter: grayscale(1); opacity: .45; }
+  #netCard .peers .face { width: 30px; height: 30px; font-size: 11px; }
+  #netCard .peers .face.emo { font-size: 17px; }
+  #netCard .peers .lostf { filter: grayscale(1); opacity: .45; }
   #netCard .lines { display: flex; gap: 6px; margin-top: 10px; }
   #netCard .lines b { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
   #netCard .lines b.up { background: #3ddc97; }
   #netCard .lines b.p2p.up { background: #2f6fd6; }
-  #netCard .hint { margin: 10px 0 0; font-size: 14px; color: var(--muted); font-weight: 700; }
   #netCard button { width: 100%; margin-top: 12px; }
-  .av.off > i { filter: grayscale(1); opacity: .45; }
-  .av .lost { position: absolute; top: 28px; left: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--bg); }
+  #toast { position: absolute; top: 8px; left: 50%; z-index: 20; transform: translate(-50%, -20px); opacity: 0; visibility: hidden; transition: transform .3s, opacity .3s, visibility 0s .3s;
+           background: var(--ink); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 16px #0007; white-space: nowrap; }
+  #toast.on { transform: translate(-50%, 0); opacity: 1; visibility: visible; transition: transform .3s, opacity .3s; }
+
+  /* 輸入線索時：只留轉盤和線索框 */
+  body.typing #chatBar, body.typing #people, body.typing .top, body.typing .status, body.typing .say, body.typing #actBox, body.typing .clue { display: none !important; }
+  body.typing .wheelbox { min-height: 0; }
+  body.chatting #people { display: none; }
+
   @media (max-height: 640px) {
-    #people { padding-top: 6px; padding-bottom: 4px; } .av > i { width: 38px; height: 38px; font-size: 16px; } .av .sc { top: 25px; }
-    .top { padding-top: 4px; padding-bottom: 2px; } .card { padding: 10px 12px; } .clue { font-size: 19px; }
+    #people { padding-top: 10px; padding-bottom: 4px; } .av > .face { width: 40px; height: 40px; font-size: 14px; } .av > .face.emo { font-size: 22px; } .av .sc { top: 26px; } .av .lost { top: 25px; }
+    .top { padding-top: 4px; padding-bottom: 2px; } .card { padding: 10px 12px; } .clue { font-size: 19px; } .podium-wrap { padding-top: 104px; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation-duration: .01s !important; animation-delay: 0s !important; } }
 </style>
 </head>
 <body>
 <div class="top">
-  <a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></a>
-  <h1>同頻轉盤</h1>
+  <a class="home" href="../" aria-label="回到遊戲合集首頁" title="遊戲合集"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></a>
+  <h1 id="title">同頻轉盤</h1>
   <button class="chip hide" id="roomChip" aria-label="連線狀態" aria-expanded="false"><span class="dot idle" id="netDot"></span><span id="roomCode"></span></button>
 </div>
 <div id="people" class="hide" aria-label="玩家"></div>
 
 <div class="stage" id="stage">
 <main>
-  <!-- 進入畫面 -->
-  <section class="card" id="joinView">
-    <input type="text" id="nameIn" maxlength="12" placeholder="暱稱" autocomplete="nickname" aria-label="暱稱">
-    <div class="gap"></div>
-    <div id="newBox" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="sect"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>公開房間</div>
-      <div class="rooms" id="roomList"></div>
-      <div class="sect"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>開房</div>
-      <div class="priv" id="privPick"></div>
-      <div class="gap" style="height:8px"></div>
-      <div class="seg" id="perPick" aria-label="每人出題次數"></div>
-      <div class="gap" style="height:8px"></div>
-      <button id="createBtn" style="width:100%">建立房間</button>
-      <div class="gap" style="height:8px"></div>
-      <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="房號" autocapitalize="characters" aria-label="房號"><button class="ghost" id="joinCodeBtn" aria-label="加入"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
-    </div>
+  <!-- 首頁 -->
+  <section class="card view" id="homeView">
+    <p class="intro">一人看得到目標區，給一個線索；其他人轉動指針猜位置，越接近中心分數越高。2 人合作、3 人以上對戰。</p>
+    <input type="text" id="nameIn" maxlength="12" placeholder="你的暱稱" autocomplete="nickname" aria-label="你的暱稱">
     <div id="hashBox" class="hide">
-      <p class="eq" style="font-size:34px;margin:6px 0 14px;letter-spacing:3px" id="hashCode"></p>
-      <div class="row"><button id="joinHashBtn" style="flex:1">加入</button><button class="ghost" id="otherBtn" aria-label="開新房間"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
+      <p class="hint" style="text-align:center;margin-top:14px">朋友邀請你加入房間</p>
+      <p class="eq" style="font-size:34px;margin:4px 0 14px;letter-spacing:3px" id="hashCode"></p>
+      <div class="row"><button id="joinHashBtn" style="flex:1">加入房間</button><button class="ghost" id="otherBtn">不加入</button></div>
     </div>
-    <p id="joinErr" role="alert" style="margin:10px 0 0;color:var(--muted);font-weight:700;text-align:center"></p>
+    <div id="newBox" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="sect"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>公開房間・點一下就能加入</div>
+      <div class="rooms" id="roomList"></div>
+      <div class="sect">用房號加入私人房間</div>
+      <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="4 碼房號" autocapitalize="characters" aria-label="房號"><button class="ghost icon" id="joinCodeBtn" aria-label="加入"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      <div class="row" style="margin-top:12px">
+        <button id="toCreate" style="flex:1"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>建立房間</button>
+        <button class="ghost" id="toOffline"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10.5 18h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>離線遊玩</button>
+      </div>
+    </div>
+    <p id="joinErr" role="alert" style="margin:10px 0 0;color:var(--muted);font-weight:700;text-align:center;min-height:0"></p>
   </section>
 
-  <!-- 遊戲畫面 -->
+  <!-- 建立房間 -->
+  <section class="card view hide" id="createView">
+    <div class="vhead"><button class="ghost" data-back aria-label="返回"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>建立房間</h2></div>
+    <div class="scroll-y">
+      <div class="lbl">房名 <small id="roomNameCount">0 / 8</small></div>
+      <input type="text" id="roomNameIn" placeholder="例如：週五桌遊團（可不填）" aria-label="房名">
+      <div class="lbl">誰可以進來</div>
+      <div class="seg2" id="privPick"></div>
+      <p class="hint" id="privHint"></p>
+      <div class="lbl">每人出題幾次</div>
+      <div class="stepper" id="perPick"></div>
+      <div class="lbl">每回合計時</div>
+      <div class="stepper" id="timerPick"></div>
+      <p class="hint">時間到時：出題者還沒給線索就跳過這題；猜題者還沒鎖定，就用當下的指針位置作答。</p>
+      <p class="hint">2 人是合作模式，一起累積隊伍分數；3 人以上是對戰模式，各自計分。進房後還可以改設定、加自訂題目。</p>
+    </div>
+    <button id="createBtn" style="width:100%;margin-top:14px">建立房間</button>
+  </section>
+
+  <!-- 離線遊玩：設定 -->
+  <section class="card view hide" id="offlineView">
+    <div class="vhead"><button class="ghost" data-back aria-label="返回"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>離線遊玩</h2></div>
+    <p class="hint" style="margin-top:0">大家用同一支手機，輪流傳給下一位。輪到誰，畫面會先顯示他的名字，確認後再操作。</p>
+    <div class="scroll-y" style="flex:1">
+      <div class="lbl">玩家 <small id="offCount">0 / 8</small></div>
+      <div class="players" id="offPlayers"></div>
+      <div class="row" style="margin-top:8px"><input type="text" id="offName" maxlength="12" placeholder="新增玩家名字" aria-label="新增玩家名字" enterkeyhint="done"><button class="icon" id="offAdd" aria-label="新增玩家"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button></div>
+      <div class="lbl">每人出題幾次</div>
+      <div class="stepper" id="offPer"></div>
+      <button class="ghost" id="offCards" style="width:100%;margin-top:12px"></button>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="ghost hide" id="offResume" style="flex:1">繼續上一局</button><button id="offStart" style="flex:1">開始</button></div>
+  </section>
+
+  <!-- 遊戲 -->
   <section class="card hide" id="gameView">
     <div id="lobbyBox">
-      <div class="mode">
-        <span id="mCoop"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="8" cy="9" r="3.2" fill="currentColor"/><circle cx="16" cy="9" r="3.2" fill="currentColor"/><path d="M2.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M10.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>合作</span>
-        <span id="mPk"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 4l10 10M4 4h4M4 4v4M20 4 10 14M20 4h-4M20 4v4M7 15l-3 3 2 2 3-3M17 15l3 3-2 2-3-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>對戰</span>
+      <div class="roomTitle" id="lobbyName"></div>
+      <div class="mode" id="modePills"></div>
+      <div class="seg2" id="privLobby"></div>
+      <div class="grid2">
+        <div><div class="lbl">每人出題</div><div class="stepper" id="perLobby"></div></div>
+        <div><div class="lbl">計時</div><div class="stepper" id="timerLobby"></div></div>
       </div>
-      <div class="priv" id="privLobby"></div>
-      <div class="seg" id="perLobby" aria-label="每人出題次數"></div>
+      <button class="ghost" id="cardsBtn"></button>
       <div class="eq" id="startHint"></div>
       <div class="actions">
         <button class="ghost" id="copyBtn"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg><span>邀請</span></button>
@@ -284,15 +404,15 @@
       </div>
     </div>
     <div id="playBox" class="hide">
-      <div class="status"><span id="roundTxt"></span><div class="prog"><i id="progBar"></i></div><span class="team hide" id="teamTxt"></span></div>
+      <div class="status"><span id="roundTxt"></span><div class="prog"><i id="progBar"></i></div><span class="tmr hide" id="tmrTxt"></span><span class="team hide" id="teamTxt"></span></div>
       <div class="wheelbox"><svg id="wheel" viewBox="0 0 400 222" preserveAspectRatio="xMidYMid meet" role="slider" aria-label="指針" aria-valuemin="0" aria-valuemax="180" tabindex="0"></svg></div>
-      <div class="ends">
+      <div class="ends" id="ends">
         <div><svg viewBox="0 0 24 24" width="18" height="18"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="leftEnd"></span></div>
         <div><span id="rightEnd"></span><svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       </div>
       <div class="clue" id="clueTxt"></div>
-      <p class="say" id="sayTxt"></p>
-      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="線索" enterkeyhint="send"><button id="clueBtn" aria-label="送出線索"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button></div>
+      <div class="say" id="sayTxt"></div>
+      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="線索" enterkeyhint="send" aria-label="線索"><button id="clueBtn" class="icon" aria-label="送出線索"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button></div>
       <div class="res hide" id="resBox"></div>
       <div class="actions" id="actBox"></div>
     </div>
@@ -301,9 +421,13 @@
 </main>
 <div id="danmaku" aria-hidden="true"></div>
 <div id="scrim"></div>
-<section id="chatWin" aria-label="聊天室" aria-hidden="true">
-  <button id="chatClose" aria-label="關閉聊天室"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+<section id="chatWin" class="win" aria-label="聊天室" aria-hidden="true">
+  <button class="xbtn" id="chatClose" aria-label="關閉聊天室"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
   <div id="msgs" aria-live="polite"></div>
+</section>
+<section id="modal" class="win" role="dialog" aria-hidden="true">
+  <button class="xbtn" id="modalClose" aria-label="關閉"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+  <div id="modalBody"></div>
 </section>
 <section id="netCard" role="dialog" aria-label="連線狀態">
   <div class="st"><span class="dot" id="netDot2"></span><span id="netTitle"></span></div>
@@ -312,13 +436,14 @@
   <p class="hint" id="netHint"></p>
   <button id="reconnectBtn" class="hide"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>重新連線</span></button>
 </section>
+<div id="handoff" class="hide"></div>
+<div id="toast" role="status"></div>
 </div>
 <form id="chatBar" class="hide">
   <button type="button" id="chatOpen" aria-label="聊天室" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span id="badge" class="hide"></span></button>
   <input type="text" id="chatIn" maxlength="200" placeholder="…" autocomplete="off" enterkeyhint="send" aria-label="訊息">
   <button class="send" aria-label="送出"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button>
 </form>
-
 <script src="cards.js"></script>
 <script type="module">
 {
@@ -328,11 +453,22 @@ const CX = 200, CY = 206, R = 186;
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 const params = new URLSearchParams(location.search);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COLORS = ['#e2483d', '#2f6fd6', '#2f8f6a', '#8e44ad', '#d97706', '#0f766e', '#be185d', '#475569'];
+const ANIMALS = ['🐱', '🐶', '🦊', '🐼', '🐸', '🐧', '🐰', '🐻', '🐯', '🐨', '🐷', '🐵', '🦁', '🐙', '🦄', '🐔'];
+const PERS = [1, 2, 3, 4, 5];
+const TIMERS = [0, ...Array.from({ length: 19 }, (_, i) => 30 + i * 5)];
+const NAME_MAX = 16;            // 房名：中文算 2、英數算 1，最多 16（中文 8 字）
+const CARD_MAX = 12;            // 自訂題目每端上限
+const isWide = c => c.codePointAt(0) > 0x2e7f;
+const units = s => Array.from(s || '').reduce((n, c) => n + (isWide(c) ? 2 : 1), 0);
+function clipUnits(s, max) { let out = '', n = 0; for (const c of Array.from(s || '')) { const u = isWide(c) ? 2 : 1; if (n + u > max) break; out += c; n += u; } return out; }
+const isEmoji = s => /\p{Extended_Pictographic}/u.test(s || '');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ---------- 連線層：正式版用 Trystero（瀏覽器直連），?local 用同瀏覽器分頁模擬 ----------
 function mockJoin(code) {
   const bc = new BroadcastChannel('wl-mock-' + code);
   const uid = 'u' + Math.random().toString(36).slice(2, 9);
@@ -355,6 +491,7 @@ function mockJoin(code) {
   return {
     ready: Promise.resolve(),
     getSelf: async () => ({ userId: uid }),
+    async leave() { post({ t: 'bye' }); bc.close(); },
     getUsers: () => Object.fromEntries(Object.keys(peers).map(k => [k, {}])),
     onUserJoin: f => jl.push(f), onUserLeave: f => ll.push(f), onError: () => {},
     makeState(ns, init) {
@@ -394,8 +531,9 @@ async function relayJoin(code) {
   const open = async str => { try { const [iv, ct] = String(str).split('.'); return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(ct)))); } catch { return null; } };
 
   let uid = null;
-  try { uid = sessionStorage.getItem('wl:uid:' + code); } catch {}
-  if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem('wl:uid:' + code, uid); } catch {} }
+  // 身分記在瀏覽器：同一個瀏覽器回到同一房會恢復座位；不同瀏覽器或無痕視窗視為不同座位
+  try { uid = localStorage.getItem('wl:uid:' + code); } catch {}
+  if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { localStorage.setItem('wl:uid:' + code, uid); } catch {} }
 
   // 本地資料：共享狀態、每人狀態、在線名單
   const S = {}, U = {}, sl = {}, ul = {}, jl = [], ll = [], el = [];
@@ -458,7 +596,7 @@ async function relayJoin(code) {
   if (!params.has('nop2p')) (async () => {
     try {
       const { joinRoom } = await import('https://cdn.jsdelivr.net/npm/trystero@0.27.0/+esm');
-      const r = joinRoom({ appId: 'josephinezulin.github.io/my-games/wavelength', password: 'wl-' + code }, code);
+      const r = p2pRoom = joinRoom({ appId: 'josephinezulin.github.io/my-games/wavelength', password: 'wl-' + code }, code);
       const act = r.makeAction('m');
       p2pSend = data => { try { act.send(data); } catch {} };
       act.onMessage(async data => handle(await open(data)));
@@ -476,8 +614,8 @@ async function relayJoin(code) {
   const statusL = [];
   function changed() { statusL.forEach(f => f()); }
   // 心跳：讓其他人知道我還在
-  setInterval(() => { broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 1 }, true); sweep(); }, 15000);
-  setInterval(sweep, 5000);
+  const timers = [setInterval(() => { broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 1 }, true); sweep(); }, 15000), setInterval(sweep, 5000)];
+  let p2pRoom = null;
   addEventListener('pagehide', () => { broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 0 }, true); });
 
   // 等第一台伺服器連上（最多 8 秒），讓保留的遊戲狀態先送到
@@ -489,6 +627,7 @@ async function relayJoin(code) {
 
   return {
     getSelf: async () => ({ userId: uid }),
+    async leave() { timers.forEach(clearInterval); await broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 0 }, true); clients.forEach(c => c.end(true)); try { p2pRoom && p2pRoom.leave(); } catch {} },
     getUsers: () => Object.fromEntries([...online].map(k => [k, {}])),
     onUserJoin: f => jl.push(f), onUserLeave: f => ll.push(f), onError: f => el.push(f),
     onStatus: f => statusL.push(f),
@@ -549,111 +688,242 @@ async function connect(code) {
   return relayJoin(code);
 }
 
+
+
+// ---------- 離線：一支手機輪流，所有資料存在本機 ----------
+function offlineRoom(saved) {
+  const S = (saved && saved.S) || {}, U = (saved && saved.U) || {}, sl = {}, ul = {};
+  const save = () => store.set('wl:offline', JSON.stringify({ S, U }));
+  return {
+    offline: true,
+    getSelf: async () => ({ userId: me }),
+    getUsers: () => Object.fromEntries(Object.keys(U.profile || {}).map(k => [k, {}])),
+    onUserJoin() {}, onUserLeave() {}, onError() {}, async leave() {},
+    addPlayer(id, val) { U.profile ??= {}; U.profile[id] = { val }; save(); (ul.profile || []).forEach(f => f()); },
+    removePlayer(id) { if (U.profile) delete U.profile[id]; save(); (ul.profile || []).forEach(f => f()); },
+    players: () => Object.keys(U.profile || {}),
+    makeState(ns, init) {
+      return {
+        get: () => (ns in S ? S[ns] : init),
+        async set(next) { const v = typeof next === 'function' ? next(ns in S ? S[ns] : init) : next; S[ns] = v; save(); (sl[ns] || []).forEach(f => f(v)); },
+        onChange: f => { (sl[ns] ??= []).push(f); },
+      };
+    },
+    makeUserState(ns, init) {
+      return {
+        get: (id = me) => (U[ns] && U[ns][id] ? U[ns][id].val : init),
+        getAll: () => Object.fromEntries(Object.entries(U[ns] || {}).map(([k, r]) => [k, r.val])),
+        async set(next) { U[ns] ??= {}; const cur = U[ns][me] ? U[ns][me].val : init; const v = typeof next === 'function' ? next(cur) : next; U[ns][me] = { val: v }; save(); (ul[ns] || []).forEach(f => f(v)); },
+        onChange: f => { (ul[ns] ??= []).push(f); },
+      };
+    },
+  };
+}
+
 // ---------- 狀態 ----------
-let room, me, code, game, dial, profile, chat, guessSt;
-let wantPub = store.get('wl:pub') !== '0', lobbyBus = null, lastAnn = '';
-let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', wantPer = Number(store.get('wl:per')) || 2, revealing = false, endShown = '';
+let room = null, me = null, code = '', OFF = false, game, dial, profile, chat, guessSt;
+let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', revealing = false, endShown = '';
+let wantPer = Number(store.get('wl:per')) || 2, wantTimer = Number(store.get('wl:timer')) || 0, wantPub = store.get('wl:pub') !== '0';
+let lobbyBus = null, lastAnn = '', hostGoneSince = 0, kickSeen, kickArmed = false, autoLocked = '', joinedAt = Date.now();
+const tabId = Math.random().toString(36).slice(2);
 
-const initialGame = { phase: 'lobby', host: null, pub: false, per: 2, mode: 'coop', gid: '', round: 0, total: 0, order: [], psychic: null, card: null, used: [],
-  clue: '', target: null, guesses: {}, results: {}, psyPts: 0, score: 0, scores: {}, log: [] };
-const COLORS = ['#e2483d', '#2f6fd6', '#2f8f6a', '#8e44ad', '#d97706', '#0f766e', '#be185d', '#475569'];
+const initialGame = { phase: 'lobby', host: null, pub: false, name: '', per: 2, timer: 0, custom: [], customOnly: false, banned: [], kicked: {},
+  mode: 'coop', gid: '', round: 0, total: 0, queue: [], order: [], psychic: null, card: null, used: [], deadline: 0,
+  clue: '', target: null, guesses: {}, results: {}, psyPts: 0, bonus: 0, score: 0, scores: {}, log: [] };
+const keepCfg = p => ({ host: p.host, pub: !!p.pub, name: p.name || '', per: p.per || 2, timer: p.timer || 0, custom: p.custom || [], customOnly: !!p.customOnly, banned: p.banned || [], kicked: p.kicked || {} });
 
-const online = () => [me, ...Object.keys(room.getUsers()).filter(id => id !== me)];
-const nameOf = id => (profile.get(id) || {}).name || '玩家';
-const G = () => ({ ...initialGame, ...(game.get() || {}) });
-const initial = n => Array.from(n.trim())[0] || '?';
+const G = () => ({ ...initialGame, ...((game && game.get()) || {}) });
+const online = () => (room ? [me, ...Object.keys(room.getUsers()).filter(id => id !== me)] : []);
+const isOn = id => online().includes(id);
+const nameOf = id => ((profile && profile.get(id)) || {}).name || '玩家';
+const banned = (g, id) => (g.banned || []).includes(id);
+// 畫面上要顯示的玩家：出題順序＋在線的人，排除被封鎖、被踢且已離開的人
+function shownIds(g = G()) {
+  const on = online();
+  return [...new Set([...g.order, ...on.filter(x => !g.order.includes(x)).sort()])]
+    .filter(id => !banned(g, id) && !(g.kicked && g.kicked[id] && !on.includes(id)) && (OFF ? room.players().includes(id) : true));
+}
 function colorOf(id) {
-  const g = G();
-  let i = g.order.indexOf(id);
-  if (i < 0) { const ids = [...new Set([...g.order, ...online().filter(x => !g.order.includes(x)).sort()])]; i = ids.indexOf(id); }
-  return COLORS[Math.max(i, 0) % COLORS.length];
+  const ids = shownIds(); let i = ids.indexOf(id);
+  if (i < 0) i = [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return COLORS[i % COLORS.length];
 }
-const guessersOf = g => online().filter(id => id !== g.psychic);
-function lockedOf(g) {
-  const all = guessSt.getAll();
-  return Object.keys(all).filter(id => id !== g.psychic && all[id] && all[id].gid === g.gid && all[id].r === g.round);
-}
-const myLock = g => { const x = guessSt.get(me); return x && x.gid === g.gid && x.r === g.round ? x.v : null; };
 
-function pickCard(used) {
-  const free = CARDS.map((_, i) => i).filter(i => !used.includes(i));
-  const pool = free.length ? free : CARDS.map((_, i) => i);
-  return pool[Math.floor(Math.random() * pool.length)];
+// ---------- 頭像：預設取名字兩字，可自選文字或動物；重複時自動改給沒人用的動物 ----------
+function defaultAv(name) {
+  const n = (name || '').trim();
+  if (!n) return '?';
+  const chars = Array.from(n).filter(c => c.trim());
+  if (chars.some(isWide)) return chars.slice(-2).join('');
+  const words = n.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (Array.from(words[0])[0] + Array.from(words[1])[0]).toUpperCase();
+  const w = Array.from(words[0]);
+  return (w[0].toUpperCase() + (w[1] || '')).slice(0, 2);
+}
+function wantAv(id) { const p = (profile && profile.get(id)) || {}; return (p.av && String(p.av).slice(0, 8)) || defaultAv(p.name); }
+function avatarMap() {
+  const ids = shownIds(), map = {}, taken = new Set();
+  for (const id of ids) {
+    let v = wantAv(id);
+    if (taken.has(v)) v = ANIMALS.find(a => !taken.has(a)) || '?';
+    taken.add(v); map[id] = v;
+  }
+  return map;
+}
+function avOf(id, map) { return (map || avatarMap())[id] || wantAv(id); }
+function faceEl(id, map, extra) {
+  const e = document.createElement('i'), v = avOf(id, map);
+  e.className = 'face' + (isEmoji(v) ? ' emo' : Array.from(v).length === 1 ? ' one' : '') + (extra ? ' ' + extra : '');
+  e.style.background = isEmoji(v) ? '#fff6e6' : colorOf(id);
+  if (isEmoji(v)) e.style.boxShadow = `inset 0 0 0 3px ${colorOf(id)}`;
+  e.textContent = v;
+  return e;
+}
+
+// ---------- 題目 ----------
+const cardKey = c => (c ? c[0] + '|' + c[1] : '');
+function pickCard(g) {
+  const custom = (g.custom || []).filter(c => Array.isArray(c) && c.length === 2);
+  const pool = g.customOnly && custom.length ? custom : [...CARDS, ...custom];
+  const used = new Set(g.used || []);
+  const free = pool.filter(c => !used.has(cardKey(c)));
+  const list = free.length ? free : pool;
+  return list[Math.floor(Math.random() * list.length)];
 }
 function mySecret(g) {
-  const k = `wl:${code}:${g.gid}:${g.round}:${g.card}`;
+  const k = `wl:${code}:${g.gid}:${g.round}:${cardKey(g.card)}`;
   let t = Number(store.get(k));
   if (!t) { t = 2 + Math.floor(Math.random() * 177); store.set(k, String(t)); }
   return t;
 }
-// 轉盤兩端相連：靠邊的得分區被切掉的部分會出現在另一端
+// 轉盤兩端相連：靠邊的得分區會延伸到另一端
 function dist(a, b) { const d = Math.abs(a - b) % 180; return Math.min(d, 180 - d); }
-function score(guess, target) {
-  const d = dist(guess, target);
-  return d <= 4 ? 4 : d <= 12 ? 3 : d <= 20 ? 2 : 0;
-}
+function score(guess, target) { const d = dist(guess, target); return d <= 4 ? 4 : d <= 12 ? 3 : d <= 20 ? 2 : 0; }
+const deadlineFor = g => (g.timer && !OFF ? Date.now() + g.timer * 1000 : 0);
+
+// ---------- 權限：房主；房主離線時由出題順序中第一位在線者代理 ----------
+function candidate(g = G()) { return [...g.order, ...online().sort()].find(id => isOn(id) && !banned(g, id)) || me; }
+function authority(g = G()) { return g.host && isOn(g.host) ? g.host : candidate(g); }
+const isHost = (g = G()) => OFF || g.host === me || !g.host;
 
 // ---------- 遊戲動作 ----------
-async function setPer(n) {
-  wantPer = n; store.set('wl:per', String(n));
-  await game.set(p => (p.phase === 'lobby' || p.phase === 'end' ? { ...initialGame, ...p, per: n } : p));
-}
 async function startGame() {
-  const order = online().sort();
+  const g0 = G();
+  const order = (OFF ? room.players() : online()).filter(id => !banned(g0, id)).sort((a, b) => (OFF ? 0 : a < b ? -1 : 1));
   if (order.length < 2) return;
-  const g0 = G(), per = g0.per || 2, card = pickCard([]);
-  await game.set({ ...initialGame, host: g0.host, pub: !!g0.pub, per, mode: order.length === 2 ? 'coop' : 'pk', gid: Math.random().toString(36).slice(2, 8),
-    phase: 'clue', round: 1, total: order.length * per, order, psychic: order[0], card, used: [card],
-    scores: Object.fromEntries(order.map(id => [id, 0])) });
+  const per = g0.per || 2, queue = [];
+  for (let k = 0; k < per; k++) queue.push(...order);
+  const card = pickCard(g0);
+  const next = { ...initialGame, ...keepCfg(g0), mode: order.length === 2 ? 'coop' : 'pk', gid: Math.random().toString(36).slice(2, 8),
+    phase: 'clue', round: 1, queue, total: queue.length, order, psychic: queue[0], card, used: [cardKey(card)],
+    scores: Object.fromEntries(order.map(id => [id, 0])) };
+  next.deadline = deadlineFor(next);
+  await game.set(next);
   await dial.set(90);
 }
 async function nextRound() {
   await game.set(p => {
     const g = { ...initialGame, ...p };
     if (!['reveal', 'clue', 'guess'].includes(g.phase)) return p;
-    if (g.round >= g.total) return { ...g, phase: 'end' };
-    const round = g.round + 1, card = pickCard(g.used);
-    return { ...g, phase: 'clue', round, psychic: g.order[(round - 1) % g.order.length], card, used: [...g.used, card],
-      clue: '', target: null, guesses: {}, results: {}, psyPts: 0 };
+    let queue = g.queue.slice();
+    // 跳過已被封鎖或踢出的人
+    for (let i = g.round; i < queue.length;) { if (banned(g, queue[i]) || (g.kicked[queue[i]] && !isOn(queue[i]))) queue.splice(i, 1); else i++; }
+    if (g.round >= queue.length) return { ...g, queue, total: queue.length, phase: 'end', deadline: 0 };
+    const round = g.round + 1, card = pickCard(g);
+    const n = { ...g, phase: 'clue', round, queue, total: queue.length, psychic: queue[round - 1], card, used: [...g.used, cardKey(card)],
+      clue: '', target: null, guesses: {}, results: {}, psyPts: 0, bonus: 0 };
+    n.deadline = deadlineFor(n);
+    return n;
   });
   await dial.set(90);
 }
 async function rerollCard() {
-  await game.set(p => { if (p.phase !== 'clue' || p.psychic !== me) return p; const card = pickCard(p.used); return { ...p, card, used: [...p.used, card] }; });
+  await game.set(p => { if (p.phase !== 'clue' || p.psychic !== me) return p; const card = pickCard(p); return { ...p, card, used: [...p.used, cardKey(card)] }; });
 }
 async function sendClue() {
   const clue = $('clueIn').value.trim();
   if (!clue) return;
   $('clueIn').value = '';
   $('clueIn').blur();
-  await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue } : p));
+  await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue, deadline: deadlineFor(p) } : p));
 }
 async function lockGuess() {
   const g = G(), v = Math.round(localDial);
-  if (g.mode === 'coop') await dial.set(v);
+  if (g.mode === 'coop' && !OFF) await dial.set(v);
   await guessSt.set({ gid: g.gid, r: g.round, v });
 }
+function lockedOf(g) {
+  const all = guessSt ? guessSt.getAll() : {};
+  return Object.keys(all).filter(id => id !== g.psychic && all[id] && all[id].gid === g.gid && all[id].r === g.round);
+}
+const myLock = g => { const x = guessSt && guessSt.get(me); return x && x.gid === g.gid && x.r === g.round ? x.v : null; };
+const guessersOf = g => (OFF ? g.order.filter(id => id !== g.psychic) : online().filter(id => id !== g.psychic && !banned(g, id)));
 async function revealIfPsychic(force) {
   const g = G();
-  if (g.phase !== 'guess' || g.psychic !== me || revealing) return;
+  if (g.phase !== 'guess' || revealing || (!OFF && g.psychic !== me)) return;
   const locked = lockedOf(g), need = guessersOf(g);
   if (!locked.length || (!force && need.some(id => !locked.includes(id)))) return;
   revealing = true;
   const all = guessSt.getAll(), target = mySecret(g), guesses = {}, results = {};
   for (const id of locked) { guesses[id] = all[id].v; results[id] = score(all[id].v, target); }
-  const avg = Math.round(Object.values(results).reduce((a, b) => a + b, 0) / locked.length);
+  // 出題者：猜中的人數＋全對 +1／全精準 +2
+  const hits = locked.filter(id => results[id] >= 2).length;
+  const everyone = need.length > 0 && need.every(id => locked.includes(id));
+  const bonus = everyone && need.every(id => results[id] >= 3) ? 2 : everyone && need.every(id => results[id] >= 2) ? 1 : 0;
+  const psyPts = g.mode === 'pk' ? hits + bonus : 0;
+  const team = Math.round(Object.values(results).reduce((a, b) => a + b, 0) / locked.length);
   try {
     await game.set(p => {
       if (p.phase !== 'guess' || p.round !== g.round || p.gid !== g.gid) return p;
       const scores = { ...(p.scores || {}) };
-      if (p.mode === 'pk') { for (const id in results) scores[id] = (scores[id] || 0) + results[id]; scores[me] = (scores[me] || 0) + avg; }
-      return { ...p, phase: 'reveal', target, guesses, results, psyPts: avg, score: p.score + (p.mode === 'coop' ? avg : 0), scores,
-        log: [...p.log, { r: p.round, card: p.card, clue: p.clue, by: p.psychic, pts: avg }] };
+      if (p.mode === 'pk') { for (const id in results) scores[id] = (scores[id] || 0) + results[id]; scores[p.psychic] = (scores[p.psychic] || 0) + psyPts; }
+      return { ...p, phase: 'reveal', deadline: 0, target, guesses, results, psyPts, bonus: p.mode === 'pk' ? bonus : 0, score: p.score + (p.mode === 'coop' ? team : 0), scores,
+        log: [...p.log, { r: p.round, card: p.card, clue: p.clue, by: p.psychic, pts: psyPts }] };
     });
   } finally { revealing = false; }
 }
+async function kickPlayer(id, ban) {
+  await game.set(p => {
+    const g = { ...initialGame, ...p };
+    const queue = g.queue.filter((x, i) => i < g.round || x !== id);
+    return { ...g, queue, total: g.phase === 'lobby' ? g.total : queue.length,
+      kicked: { ...g.kicked, [id]: Math.random().toString(36).slice(2, 8) }, banned: ban ? [...new Set([...g.banned, id])] : g.banned };
+  });
+}
 
-// ---------- 圖示 ----------
+// ---------- 每秒檢查：計時、房主轉移、中途加入 ----------
+async function tick() {
+  if (!room || !game) return;
+  const g = G(), now = Date.now(), inGame = ['clue', 'guess', 'reveal'].includes(g.phase);
+  renderTimer();
+  if (OFF) return;
+  // 房主離線 30 秒，交給下一位
+  if (g.host && !isOn(g.host)) {
+    hostGoneSince = hostGoneSince || now;
+    if (now - hostGoneSince > 30000 && candidate(g) === me) { hostGoneSince = 0; await game.set(p => (p.host === g.host ? { ...p, host: me } : p)); }
+  } else hostGoneSince = 0;
+  const auth = authority(g) === me;
+  // 中途加入：排進出題順序最後，回合數跟著增加
+  if (auth && inGame) {
+    const newbies = online().filter(id => !g.order.includes(id) && !banned(g, id));
+    if (newbies.length) await game.set(p => {
+      const add = newbies.filter(id => !p.order.includes(id)); if (!add.length) return p;
+      const queue = [...p.queue]; for (let k = 0; k < (p.per || 2); k++) queue.push(...add);
+      return { ...p, order: [...p.order, ...add], queue, total: queue.length, scores: { ...p.scores, ...Object.fromEntries(add.map(id => [id, 0])) } };
+    });
+  }
+  // 計時
+  if (g.timer && g.deadline && now > g.deadline) {
+    if (g.phase === 'clue' && auth) await nextRound();
+    if (g.phase === 'guess') {
+      const key = g.gid + ':' + g.round;
+      if (g.psychic !== me && myLock(g) == null && autoLocked !== key) { autoLocked = key; await lockGuess(); }
+      if (g.psychic === me && now > g.deadline + 3000) await revealIfPsychic(true);
+      if (!isOn(g.psychic) && auth && now > g.deadline + 6000) await nextRound();
+    }
+  }
+}
+
 const SVG = {
   crown: s => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" fill="currentColor" stroke="#1f2a2b" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
   ok: '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -670,217 +940,15 @@ const SVG = {
   chat: '<svg viewBox="0 0 24 24" width="64" height="64"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
 };
 
-// ---------- 轉盤繪製 ----------
-const pt = (a, r) => { const t = a * Math.PI / 180; return [CX - r * Math.cos(t), CY - r * Math.sin(t)]; };
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const f1 = n => n.toFixed(1);
-function arc(a1, a2, r, fill) {
-  if (a2 - a1 < .2) return '';
-  const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
-  return `<path d="M${CX} ${CY}L${f1(x1)} ${f1(y1)}A${r} ${r} 0 0 1 ${f1(x2)} ${f1(y2)}Z" fill="${fill}"/>`;
-}
-// 超出邊界的部分繞到另一端
-function wedge(a1, a2, r, fill) {
-  let s = arc(Math.max(a1, 0), Math.min(a2, 180), r, fill);
-  if (a1 < 0) s += arc(180 + a1, 180, r, fill);
-  if (a2 > 180) s += arc(0, a2 - 180, r, fill);
-  return s;
-}
-const wrap = a => ((a % 180) + 180) % 180;
-function zones(t) {
-  let s = wedge(t - 20, t + 20, R - 6, 'var(--z2)') + wedge(t - 12, t + 12, R - 6, 'var(--z3)') + wedge(t - 4, t + 4, R - 6, 'var(--z4)');
-  [[-16, 2], [-8, 3], [0, 4], [8, 3], [16, 2]].forEach(([o, n]) => {
-    const a = wrap(t + o); if (a < 3 || a > 177) return;
-    const [x, y] = pt(a, R - 30);
-    s += `<text x="${f1(x)}" y="${f1(y + 6)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
-  });
-  return s;
-}
-function needle(v, color, label) {
-  const [nx, ny] = pt(v, R - 16);
-  let s = `<line x1="${CX}" y1="${CY}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#1f2a2b" stroke-width="6" stroke-linecap="round"/>`;
-  if (label) s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="14" fill="${color}" stroke="#1f2a2b" stroke-width="2.5"/><text x="${f1(nx)}" y="${f1(ny + 5)}" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">${label}</text>`;
-  else s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="10" fill="${color}" stroke="#1f2a2b" stroke-width="3"/>`;
-  return s;
-}
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-function drawWheel(showT, needles) {
-  const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
-  let s = `<path d="M${CX - R - 8} ${CY}A${R + 8} ${R + 8} 0 0 1 ${CX + R + 8} ${CY}Z" fill="#0a2b2c"/>`;
-  s += `<path d="M${CX - R} ${CY}A${R} ${R} 0 0 1 ${CX + R} ${CY}Z" fill="#fbf4e6"/>`;
-  if (showT != null) s += zones(showT);
-  else s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 92}" text-anchor="middle" font-size="44" font-weight="900" fill="#d6cab2">?</text>`;
-  s += ticks + needles.map(n => needle(n.v, n.color, esc(n.label || ''))).join('');
-  s += `<circle cx="${CX}" cy="${CY}" r="22" fill="#1f2a2b"/><circle cx="${CX}" cy="${CY}" r="9" fill="#e2483d"/>`;
-  $('wheel').innerHTML = s;
-}
-function canDrag() { const g = G(); return g.phase === 'guess' && g.psychic !== me && myLock(g) == null; }
-function angleFromEvent(e) {
-  const svg = $('wheel'), p = svg.createSVGPoint();
-  p.x = e.clientX; p.y = e.clientY;
-  const q = p.matrixTransform(svg.getScreenCTM().inverse());
-  const th = Math.atan2(Math.max(CY - q.y, 0), q.x - CX) * 180 / Math.PI;
-  return clamp(180 - th, 0, 180);
-}
-function pushDial(v) {
-  localDial = v;
-  renderWheel();
-  if (G().mode !== 'coop') return;
-  const now = Date.now();
-  clearTimeout(sendTimer);
-  if (now - lastSend > 150) { lastSend = now; dial.set(Math.round(v)); }
-  else sendTimer = setTimeout(() => { lastSend = Date.now(); dial.set(Math.round(localDial)); }, 160);
-}
-
-// ---------- 畫面 ----------
-function text(el, s) { el.textContent = s; }
-function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
-function avatarEl(id) {
-  const e = document.createElement('i');
-  e.style.background = colorOf(id);
-  e.textContent = initial(nameOf(id));
-  return e;
-}
-function renderPeople() {
-  const g = G(), on = online(), inGame = !['lobby', 'end'].includes(g.phase);
-  const locked = g.phase === 'guess' ? lockedOf(g) : [];
-  const ids = [...new Set([...g.order, ...on])];
-  $('people').replaceChildren(...ids.map(id => {
-    const psy = inGame && id === g.psychic;
-    const d = el('div', 'av' + (id === me ? ' me' : '') + (on.includes(id) ? '' : ' off') + (psy ? ' psy' : ''));
-    d.title = nameOf(id);
-    d.append(avatarEl(id));
-    const nm = document.createElement('small'); nm.textContent = id === me ? '我' : nameOf(id); d.append(nm);
-    if (!on.includes(id)) d.append(el('span', 'lost', ICON_LOST));
-    if (psy) d.append(el('span', 'crown', SVG.crown(22)));
-    else if (locked.includes(id)) d.append(el('span', 'ok', SVG.ok));
-    if (g.mode === 'pk' && g.phase !== 'lobby') { const sc = el('span', 'sc'); sc.textContent = String(g.scores[id] || 0); d.append(sc); }
-    return d;
-  }));
-}
-function renderSeg(box, cur, enabled) {
-  const ic = el('span', 'ic', SVG.card(22)); ic.title = '每人出題次數';
-  box.replaceChildren(ic, ...[1, 2, 3, 4, 5].map(n => {
-    const b = document.createElement('button');
-    b.textContent = '×' + n; b.setAttribute('aria-pressed', String(n === cur));
-    b.setAttribute('aria-label', `每人出 ${n} 題`);
-    b.disabled = !enabled;
-    b.onclick = () => (box.id === 'perPick' ? (wantPer = n, store.set('wl:per', String(n)), renderSeg(box, n, true)) : setPer(n));
-    return b;
-  }));
-}
-function renderWheel() {
-  const g = G(), amPsy = g.psychic === me;
-  let showT = null, needles = [];
-  if (g.phase === 'reveal') {
-    showT = g.target;
-    needles = Object.entries(g.guesses).map(([id, v]) => ({ v, color: colorOf(id), label: initial(nameOf(id)) }));
-  } else if (amPsy) {
-    showT = mySecret(g);
-    if (g.phase === 'guess' && g.mode === 'coop') needles = [{ v: dial.get(), color: colorOf(online().find(id => id !== me) || me) }];
-  } else if (g.phase === 'guess') {
-    const lk = myLock(g);
-    needles = [{ v: lk ?? localDial, color: colorOf(me), label: lk != null ? initial(nameOf(me)) : '' }];
-  }
-  drawWheel(showT, needles);
-  $('wheel').setAttribute('aria-valuenow', String(Math.round(localDial)));
-  $('wheel').classList.toggle('drag', canDrag());
-}
-const ICON_GLOBE = '<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
-const ICON_LOCK = '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
-function renderPriv(box, pub, enabled) {
-  const mk = (val, icon, label) => {
-    const b = el('button', '', icon + `<span>${label}</span>`);
-    b.setAttribute('aria-pressed', String(pub === val)); b.disabled = !enabled;
-    b.onclick = () => {
-      if (box.id === 'privPick') { wantPub = val; store.set('wl:pub', val ? '1' : '0'); renderPriv(box, val, true); }
-      else game.set(p => (p.phase === 'lobby' || p.phase === 'end' ? { ...p, pub: val } : p));
-    };
-    return b;
-  };
-  box.replaceChildren(mk(true, ICON_GLOBE, '公開'), mk(false, ICON_LOCK, '私人'));
-}
-// 公開房間：由在線玩家中 id 最小的那位負責定時貼簡介；改成私人就撤下
-async function announce(force) {
-  if (!room) return;
-  const g = G(), on = online().sort();
-  if (on[0] !== me) return;
-  lobbyBus = lobbyBus || await lobbyConnect();
-  if (!g.pub) { if (lastAnn && lastAnn !== 'off') lobbyBus.publish(code, null); lastAnn = 'off'; return; }
-  const info = { v: 1, host: nameOf(g.host || me).slice(0, 12), players: online().slice(0, 10).map(id => ({ n: initial(nameOf(id)), c: colorOf(id) })),
-    phase: g.phase, round: g.round, total: g.total, t: Date.now() };
-  const sig = JSON.stringify({ ...info, t: 0 });
-  if (!force && sig === lastAnn) return;
-  lastAnn = sig; lobbyBus.publish(code, info);
-}
-
-function render() {
-  if (!room) return;
-  const g = G(), amPsy = g.psychic === me, on = online(), n = on.length;
-  const inGame = !['lobby', 'end'].includes(g.phase);
-  $('lobbyBox').classList.toggle('hide', g.phase !== 'lobby');
-  $('playBox').classList.toggle('hide', !inGame);
-  $('endBox').classList.toggle('hide', g.phase !== 'end');
-  renderPeople();
-
-  if (g.phase === 'lobby') {
-    endShown = '';
-    $('mCoop').classList.toggle('on', n <= 2); $('mPk').classList.toggle('on', n > 2);
-    renderSeg($('perLobby'), g.per || 2, g.host === me || !g.host);
-    renderPriv($('privLobby'), !!g.pub, g.host === me || !g.host);
-    const per = g.per || 2;
-    $('startHint').innerHTML = n < 2 ? '<span class="wait"><i></i><i></i><i></i></span>'
-      : `<span>${SVG.person}${n}</span><span class="op">×</span><span>${SVG.card(22)}${per}</span><span class="op">=</span><span>${n * per}</span>`;
-    $('startBtn').disabled = n < 2;
-  }
-  if (inGame) {
-    const key = g.gid + ':' + g.round;
-    if (key !== dialKey) { dialKey = key; localDial = 90; }
-    text($('roundTxt'), `${g.round}/${g.total}`);
-    $('progBar').style.width = (100 * (g.round - (g.phase === 'reveal' ? 0 : 1)) / g.total) + '%';
-    $('teamTxt').classList.toggle('hide', g.mode !== 'coop');
-    $('teamTxt').innerHTML = SVG.star(16) + g.score;
-    const c = CARDS[g.card] || ['', ''];
-    text($('leftEnd'), c[0]); text($('rightEnd'), c[1]);
-    renderWheel();
-    text($('clueTxt'), g.clue || '');
-    $('clueForm').classList.toggle('hide', !(g.phase === 'clue' && amPsy));
-    const psyOn = on.includes(g.psychic), locked = lockedOf(g), need = guessersOf(g);
-    const say = $('sayTxt'); say.replaceChildren();
-    if (g.phase === 'clue' && !amPsy) say.append(avatarInline(g.psychic), ' 想線索中…');
-    if (g.phase === 'guess') say.textContent = amPsy || myLock(g) != null ? `${locked.length} / ${need.length}` : '';
-    if (!psyOn && !amPsy && g.phase !== 'reveal') { say.replaceChildren(avatarInline(g.psychic), ' 離線'); }
-    const res = $('resBox');
-    res.classList.toggle('hide', g.phase !== 'reveal');
-    if (g.phase === 'reveal') {
-      const chip = (id, pts, psy) => {
-        const d = el('div', pts ? '' : 'zero'); d.append(avatarEl(id));
-        if (psy) d.insertAdjacentHTML('beforeend', SVG.crown(16));
-        d.append('+' + pts); return d;
-      };
-      const chips = [...Object.entries(g.results).map(([id, p]) => chip(id, p)), ...(g.mode === 'pk' ? [chip(g.psychic, g.psyPts, true)] : [])];
-      chips.forEach((c, i) => { c.style.animationDelay = (i * .08) + 's'; });
-      res.replaceChildren(...chips);
-    }
-    const act = $('actBox'); act.replaceChildren();
-    const btn = (icon, label, fn, cls) => { const b = el('button', cls || '', icon + `<span>${label}</span>`); b.onclick = fn; act.append(b); };
-    if (g.phase === 'clue' && amPsy) btn(SVG.shuffle, '換題', rerollCard, 'ghost small');
-    if (g.phase === 'guess' && !amPsy && myLock(g) == null) btn(SVG.lock, '鎖定', lockGuess);
-    if (g.phase === 'guess' && amPsy && locked.length && locked.length < need.length) btn(SVG.eye, '揭曉', () => revealIfPsychic(true), 'ghost small');
-    if (g.phase === 'reveal') btn(g.round >= g.total ? SVG.trophy : SVG.next, g.round >= g.total ? '結算' : '下一題', nextRound);
-    if (!psyOn && !amPsy && g.phase !== 'reveal') btn(SVG.skip, '跳過', nextRound, 'ghost small');
-  }
-  if (g.phase === 'end' && endShown !== g.gid) { endShown = g.gid; renderEnd(g); }
-  revealIfPsychic(false);
-  announce(false);
-}
-function avatarInline(id) {
-  const i = avatarEl(id);
-  Object.assign(i.style, { display: 'inline-grid', placeItems: 'center', width: '24px', height: '24px', borderRadius: '50%', color: '#fff', fontStyle: 'normal', fontSize: '12px', verticalAlign: '-6px' });
-  return i;
-}
-
-// ---------- 結算動畫 ----------
+SVG.pen = s => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M4 20l1.2-4.6L16.5 4.1a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z" fill="currentColor"/><path d="M4 20l4.6-1.2" stroke="currentColor" stroke-width="2"/></svg>`;
+SVG.clock = '<svg viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 9v4l3 2M9 2.5h6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>';
+SVG.cards = '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="6" width="12" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 3.5h10a2.5 2.5 0 0 1 2.5 2.5v12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+SVG.globe = '<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+SVG.lockc = '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
+SVG.coop = '<svg viewBox="0 0 24 24" width="16" height="16"><circle cx="8" cy="9" r="3.2" fill="currentColor"/><circle cx="16" cy="9" r="3.2" fill="currentColor"/><path d="M2.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M10.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+SVG.pk = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 4l10 10M4 4h4M4 4v4M20 4 10 14M20 4h-4M20 4v4M7 15l-3 3 2 2 3-3M17 15l3 3-2 2-3-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+SVG.lost = '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M3 3l18 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+SVG.target = '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
 function confetti(box, count = 70) {
   if (reduceMotion) return;
   const layer = el('div', 'confetti'); box.append(layer);
@@ -905,14 +973,349 @@ function countUp(node, to, delay, dur = 700) {
     requestAnimationFrame(step);
   }, delay);
 }
+
+
+function text(n, s) { n.textContent = s; }
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ease = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+function toast(msg) { const t = $('toast'); text(t, msg); t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
+
+// ---------- 轉盤 ----------
+const pt = (a, r) => { const t = a * Math.PI / 180; return [CX - r * Math.cos(t), CY - r * Math.sin(t)]; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const f1 = n => n.toFixed(1);
+function arc(a1, a2, r, fill) {
+  if (a2 - a1 < .2) return '';
+  const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
+  return `<path d="M${CX} ${CY}L${f1(x1)} ${f1(y1)}A${r} ${r} 0 0 1 ${f1(x2)} ${f1(y2)}Z" fill="${fill}"/>`;
+}
+function wedge(a1, a2, r, fill) {
+  let s = arc(Math.max(a1, 0), Math.min(a2, 180), r, fill);
+  if (a1 < 0) s += arc(180 + a1, 180, r, fill);
+  if (a2 > 180) s += arc(0, a2 - 180, r, fill);
+  return s;
+}
+const wrap = a => ((a % 180) + 180) % 180;
+function zones(t) {
+  let s = wedge(t - 20, t + 20, R - 6, 'var(--z2)') + wedge(t - 12, t + 12, R - 6, 'var(--z3)') + wedge(t - 4, t + 4, R - 6, 'var(--z4)');
+  [[-16, 2], [-8, 3], [0, 4], [8, 3], [16, 2]].forEach(([o, n]) => {
+    const a = wrap(t + o); if (a < 3 || a > 177) return;
+    const [x, y] = pt(a, R - 30);
+    s += `<text x="${f1(x)}" y="${f1(y + 6)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
+  });
+  return s;
+}
+// 頭像放在指針上，第 k 層往圓心內移，保證不重疊
+function needle(n) {
+  const [tx, ty] = pt(n.v, R - 12);
+  let s = `<line x1="${CX}" y1="${CY}" x2="${f1(tx)}" y2="${f1(ty)}" stroke="#1f2a2b" stroke-width="5" stroke-linecap="round" opacity="${n.dim ? .35 : 1}"/>`;
+  if (n.label == null) return s + `<circle cx="${f1(tx)}" cy="${f1(ty)}" r="10" fill="${n.color}" stroke="#1f2a2b" stroke-width="3"/>`;
+  const rr = R - 24 - (n.layer || 0) * 34, [x, y] = pt(n.v, rr);
+  const emo = isEmoji(n.label), len = Array.from(n.label).length;
+  const fs = emo ? 19 : len >= 2 ? 12.5 : 16;
+  s += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${n.scale ?? 1})" opacity="${n.alpha ?? 1}"><circle r="17" fill="${emo ? '#fff6e6' : n.color}" stroke="${emo ? n.color : '#1f2a2b'}" stroke-width="${emo ? 3.5 : 2.5}"/>` +
+       `<text y="${emo ? 6.5 : fs * .36}" text-anchor="middle" font-size="${fs}" font-weight="900" fill="#fff" letter-spacing="-.5">${esc(n.label)}</text></g>`;
+  return s;
+}
+function drawWheel(showT, needles, coverFrom) {
+  const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
+  let s = `<path d="M${CX - R - 8} ${CY}A${R + 8} ${R + 8} 0 0 1 ${CX + R + 8} ${CY}Z" fill="#0a2b2c"/>`;
+  s += `<path d="M${CX - R} ${CY}A${R} ${R} 0 0 1 ${CX + R} ${CY}Z" fill="#fbf4e6"/>`;
+  const cover = `<text x="${CX}" y="${CY - 92}" text-anchor="middle" font-size="44" font-weight="900" fill="#d6cab2">?</text>`;
+  if (showT != null) {
+    s += zones(showT);
+    if (coverFrom != null && coverFrom < 180) s += arc(coverFrom, 180, R - 4, '#e8dfcc') + (coverFrom < 60 ? cover : '');
+  } else s += arc(0, 180, R - 6, '#e8dfcc') + cover;
+  s += ticks + needles.map(needle).join('');
+  s += `<circle cx="${CX}" cy="${CY}" r="22" fill="#1f2a2b"/><circle cx="${CX}" cy="${CY}" r="9" fill="#e2483d"/>`;
+  $('wheel').innerHTML = s;
+}
+function layersFor(entries) {
+  const done = [];
+  for (const e of [...entries].sort((a, b) => a.v - b.v)) {
+    let k = 0;
+    while (done.some(o => o.layer === k && dist(o.v, e.v) < 11)) k++;
+    e.layer = k % 4; done.push(e);
+  }
+  return entries;
+}
+function canDrag() { const g = G(); return g.phase === 'guess' && g.psychic !== me && myLock(g) == null; }
+function angleFromEvent(e) {
+  const svg = $('wheel'), p = svg.createSVGPoint();
+  p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(svg.getScreenCTM().inverse());
+  const th = Math.atan2(Math.max(CY - q.y, 0), q.x - CX) * 180 / Math.PI;
+  return clamp(180 - th, 0, 180);
+}
+function pushDial(v) {
+  localDial = v;
+  renderWheel();
+  if (G().mode !== 'coop' || OFF) return;
+  const now = Date.now();
+  clearTimeout(sendTimer);
+  if (now - lastSend > 150) { lastSend = now; dial.set(Math.round(v)); }
+  else sendTimer = setTimeout(() => { lastSend = Date.now(); dial.set(Math.round(localDial)); }, 160);
+}
+
+// ---------- 擋板與揭曉動畫 ----------
+let shutter = null, seq = null, rafOn = false;
+function loop() {
+  if (rafOn) return; rafOn = true;
+  const step = () => {
+    renderWheel();
+    const busy = (shutter && performance.now() - shutter.t0 < 800) || (seq && performance.now() < seq.end + 100);
+    if (busy) requestAnimationFrame(step); else rafOn = false;
+  };
+  requestAnimationFrame(step);
+}
+function startReveal(g) {
+  const key = g.gid + ':' + g.round;
+  if (seq && seq.key === key) return;
+  const map = avatarMap();
+  const items = layersFor(Object.entries(g.guesses).map(([id, v]) => ({ id, v, pts: g.results[id] || 0, color: colorOf(id), label: avOf(id, map) })))
+    .sort((a, b) => dist(b.v, g.target) - dist(a.v, g.target));
+  const fast = reduceMotion, t0 = performance.now(), COVER = fast ? 0 : 650, GAP = fast ? 0 : 750, SWEEP = fast ? 0 : 450;
+  items.forEach((it, i) => { it.start = t0 + COVER + 100 + i * GAP; it.land = it.start + SWEEP; it.done = fast; });
+  const psyAt = (items.length ? items[items.length - 1].land : t0 + COVER) + (fast ? 0 : 450);
+  seq = { key, t0, cover: COVER, items, psyAt, end: psyAt + (fast ? 0 : 300), psyDone: fast, gid: g.gid };
+  const res = $('resBox'); res.replaceChildren(); res.classList.remove('hide');
+  const land = it => {
+    if (!seq || seq.key !== key) return;
+    it.done = true;
+    const chip = el('div', it.pts ? 'pop' : 'zero pop'); chip.append(faceEl(it.id, map)); chip.append('+' + it.pts); res.append(chip);
+    if (it.pts && !fast) flyPoints(it, '+' + it.pts);
+    renderPeople();
+  };
+  const psy = () => {
+    if (!seq || seq.key !== key) return;
+    seq.psyDone = true;
+    const gg = G();
+    if (gg.mode === 'pk') {
+      const chip = el('div', gg.psyPts ? 'pop' : 'zero pop'); chip.append(faceEl(gg.psychic, map)); chip.insertAdjacentHTML('beforeend', SVG.pen(15)); chip.append('+' + gg.psyPts);
+      if (gg.bonus) { const b = el('span', 'bonus' + (gg.bonus === 2 ? ' top' : ''), gg.bonus === 2 ? SVG.target + '全精準 +2' : SVG.ok + '全對 +1'); chip.append(b); if (!fast) setTimeout(() => confetti($('gameView'), 30), 150); }
+      res.append(chip);
+    }
+    renderPeople(); render();
+  };
+  items.forEach(it => { if (fast) land(it); else setTimeout(() => land(it), it.land - t0); });
+  if (fast) psy(); else setTimeout(psy, psyAt - t0);
+  loop();
+}
+function flyPoints(it, label) {
+  const svg = $('wheel'), rr = R - 24 - (it.layer || 0) * 34, [x, y] = pt(it.v, rr);
+  const p = svg.createSVGPoint(); p.x = x; p.y = y; const s = p.matrixTransform(svg.getScreenCTM());
+  const target = document.querySelector(`#people .av[data-id="${CSS.escape(it.id)}"]`);
+  if (!target) return;
+  const tr = target.getBoundingClientRect();
+  const f = el('div', 'fly'); f.textContent = label; document.body.append(f);
+  const w = f.offsetWidth, h = f.offsetHeight;
+  f.style.left = (s.x - w / 2) + 'px'; f.style.top = (s.y - h / 2) + 'px';
+  f.animate([{ transform: 'translate(0,0) scale(.6)', opacity: 0 }, { transform: 'translate(0,-18px) scale(1.15)', opacity: 1, offset: .25 },
+    { transform: `translate(${tr.left + tr.width - 10 - s.x}px, ${tr.top + 34 - s.y}px) scale(.6)`, opacity: .9 }], { duration: 750, easing: 'cubic-bezier(.4,0,.6,1)' }).onfinish = () => f.remove();
+}
+function pending(id, g) {
+  if (!seq || g.phase !== 'reveal' || seq.key !== g.gid + ':' + g.round) return 0;
+  let p = 0;
+  for (const it of seq.items) if (it.id === id && !it.done) p += it.pts;
+  if (!seq.psyDone && id === g.psychic && g.mode === 'pk') p += g.psyPts;
+  return p;
+}
+const seqDone = g => !seq || seq.key !== g.gid + ':' + g.round || seq.psyDone;
+
+function renderWheel() {
+  const g = G(), amPsy = g.psychic === me, now = performance.now();
+  let showT = null, needles = [], coverFrom = null;
+  if (g.phase === 'reveal') {
+    showT = g.target;
+    if (seq && seq.key === g.gid + ':' + g.round) {
+      coverFrom = 180 * ease((now - seq.t0) / Math.max(1, seq.cover));
+      for (const it of seq.items) {
+        if (now < it.start) continue;
+        const k = ease((now - it.start) / Math.max(1, it.land - it.start));
+        needles.push({ v: 90 + (it.v - 90) * k, color: it.color, label: it.label, layer: it.layer, alpha: k > .7 ? 1 : 0, scale: it.done ? 1 : .6 + .4 * k });
+      }
+    }
+  } else if (amPsy && g.phase !== 'lobby') {
+    showT = mySecret(g);
+    const sk = g.gid + ':' + g.round + ':' + cardKey(g.card);
+    if (!shutter || shutter.key !== sk) { shutter = { key: sk, t0: now }; loop(); }
+    coverFrom = reduceMotion ? 180 : 180 * ease((now - shutter.t0) / 700);
+    if (g.phase === 'guess' && g.mode === 'coop' && !OFF) needles = [{ v: dial.get(), color: colorOf(online().find(id => id !== me) || me) }];
+  } else if (g.phase === 'guess') {
+    const lk = myLock(g);
+    needles = [{ v: lk ?? localDial, color: colorOf(me), label: lk != null ? avOf(me) : null }];
+  }
+  drawWheel(showT, needles, coverFrom);
+  $('wheel').setAttribute('aria-valuenow', String(Math.round(localDial)));
+  $('wheel').classList.toggle('drag', canDrag());
+}
+
+// ---------- 頭像列 ----------
+let prevPeople = { ids: new Set(), locked: new Set(), leaders: new Set(), scores: {}, psy: null };
+function leadersOf(g) {
+  if (g.mode !== 'pk' || g.phase === 'lobby') return new Set();
+  const ids = shownIds(g), sc = id => (g.scores[id] || 0) - pending(id, g);
+  const top = Math.max(0, ...ids.map(sc));
+  return new Set(top > 0 ? ids.filter(id => sc(id) === top) : []);
+}
+function renderPeople() {
+  if (!room) return;
+  const g = G(), on = online(), inGame = ['clue', 'guess', 'reveal'].includes(g.phase), map = avatarMap();
+  const locked = new Set(g.phase === 'guess' ? lockedOf(g) : []);
+  const leaders = leadersOf(g), ids = shownIds(g), next = { ids: new Set(ids), locked, leaders, scores: {}, psy: inGame ? g.psychic : null };
+  $('people').replaceChildren(...ids.map(id => {
+    const d = el('button', 'av' + (id === me && !OFF ? ' me' : '') + (on.includes(id) ? '' : ' off'));
+    d.type = 'button'; d.dataset.id = id; d.title = nameOf(id);
+    d.setAttribute('aria-label', nameOf(id));
+    const f = faceEl(id, map, prevPeople.ids.size && !prevPeople.ids.has(id) ? 'pop' : ''); d.append(f);
+    const nm = document.createElement('small'); nm.textContent = id === me && !OFF ? '我' : nameOf(id); d.append(nm);
+    if (leaders.has(id)) d.append(el('span', 'crown' + (prevPeople.leaders.has(id) ? '' : ' drop'), SVG.crown(22)));
+    if (inGame && id === g.psychic) d.append(el('span', 'pen' + (prevPeople.psy === id ? '' : ' pop'), SVG.pen(13)));
+    else if (locked.has(id)) d.append(el('span', 'ok' + (prevPeople.locked.has(id) ? '' : ' pop'), SVG.ok));
+    if (!on.includes(id) && !OFF) d.append(el('span', 'lost', SVG.lost));
+    if (g.mode === 'pk' && g.phase !== 'lobby') {
+      const v = (g.scores[id] || 0) - pending(id, g); next.scores[id] = v;
+      const sc = el('span', 'sc' + (prevPeople.scores[id] != null && prevPeople.scores[id] !== v ? ' bump' : '')); sc.textContent = String(v); d.append(sc);
+    }
+    d.onclick = () => onAvatarTap(id);
+    return d;
+  }));
+  prevPeople = next;
+}
+
+// ---------- 共用元件 ----------
+function stepper(box, values, value, fmt, enabled, onChange) {
+  const i = Math.max(0, values.indexOf(value));
+  box.replaceChildren();
+  const minus = el('button', '', '−'), plus = el('button', '', '+'), out = el('output');
+  minus.type = plus.type = 'button';
+  minus.setAttribute('aria-label', '減少'); plus.setAttribute('aria-label', '增加');
+  out.innerHTML = fmt(values[i]);
+  minus.disabled = !enabled || i === 0; plus.disabled = !enabled || i === values.length - 1;
+  minus.onclick = () => onChange(values[i - 1]); plus.onclick = () => onChange(values[i + 1]);
+  box.append(minus, out, plus);
+  box.classList.toggle('ro', !enabled);
+}
+const fmtPer = n => `${n}<small>次</small>`;
+const fmtTimer = s => (s ? `${s}<small>秒</small>` : '關閉');
+function privSeg(box, pub, enabled, onChange) {
+  const mk = (val, icon, label) => { const b = el('button', '', icon + `<span>${label}</span>`); b.type = 'button'; b.setAttribute('aria-pressed', String(pub === val)); b.disabled = !enabled; b.onclick = () => onChange(val); return b; };
+  box.replaceChildren(mk(true, SVG.globe, '公開'), mk(false, SVG.lockc, '私人'));
+  box.classList.toggle('ro', !enabled);
+}
+function openModal(nodes, onClose) {
+  $('modalBody').replaceChildren(...nodes);
+  $('modal').classList.add('on'); $('modal').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('scrim-on');
+  openModal.onClose = onClose;
+}
+function closeModal() {
+  $('modal').classList.remove('on'); $('modal').setAttribute('aria-hidden', 'true');
+  if (!document.body.classList.contains('chat-on')) document.body.classList.remove('scrim-on');
+  const f = openModal.onClose; openModal.onClose = null; if (f) f();
+}
+
+// ---------- 主畫面 ----------
+function showView(v) {
+  for (const id of ['homeView', 'createView', 'offlineView', 'gameView']) $(id).classList.toggle('hide', id !== v);
+  const inRoom = v === 'gameView' || (v === 'offlineView' && false);
+  $('people').classList.toggle('hide', !(room && (v === 'gameView')));
+  $('chatBar').classList.toggle('hide', !(room && !OFF && v === 'gameView'));
+  $('roomChip').classList.toggle('hide', !(room && !OFF));
+  if (!inRoom) document.body.classList.remove('typing');
+}
+function setTitle() {
+  const g = room && game ? G() : null;
+  text($('title'), OFF ? '離線遊玩' : g && g.name ? g.name : '同頻轉盤');
+}
+function renderTimer() {
+  const g = G(), t = $('tmrTxt');
+  const on = g.timer && g.deadline && ['clue', 'guess'].includes(g.phase) && !OFF;
+  t.classList.toggle('hide', !on);
+  if (!on) return;
+  const left = Math.max(0, Math.ceil((g.deadline - Date.now()) / 1000));
+  t.innerHTML = SVG.clock + left;
+  t.classList.toggle('low', left <= 10);
+}
+let lastCard = '', lastClue = '';
+function render() {
+  if (!room || !game) return;
+  const g = G(), amPsy = g.psychic === me, on = online(), n = OFF ? room.players().length : on.length;
+  const inGame = ['clue', 'guess', 'reveal'].includes(g.phase);
+  setTitle();
+  // 被踢或封鎖
+  if (!OFF && kickArmed && (banned(g, me) || (g.kicked && g.kicked[me] && g.kicked[me] !== kickSeen))) { kickOut(banned(g, me) ? '你已被房主封鎖，無法再進入這個房間' : '你被房主請出房間了'); return; }
+  if (OFF && g.phase === 'lobby') { showView('offlineView'); renderOffline(); return; }
+  showView('gameView');
+  $('lobbyBox').classList.toggle('hide', g.phase !== 'lobby');
+  $('playBox').classList.toggle('hide', !inGame);
+  $('endBox').classList.toggle('hide', g.phase !== 'end');
+  renderPeople();
+
+  if (g.phase === 'lobby') {
+    endShown = '';
+    const host = isHost(g), per = g.per || 2;
+    text($('lobbyName'), g.name || '同頻轉盤');
+    $('modePills').innerHTML = `<span class="${n <= 2 ? 'on' : ''}">${SVG.coop}2 人合作</span><span class="${n > 2 ? 'on' : ''}">${SVG.pk}3 人以上對戰</span>`;
+    privSeg($('privLobby'), !!g.pub, host, v => game.set(p => ({ ...p, pub: v })));
+    stepper($('perLobby'), PERS, per, fmtPer, host, v => { store.set('wl:per', String(v)); game.set(p => ({ ...p, per: v })); });
+    stepper($('timerLobby'), TIMERS, g.timer || 0, fmtTimer, host, v => { store.set('wl:timer', String(v)); game.set(p => ({ ...p, timer: v })); });
+    $('cardsBtn').innerHTML = SVG.cards + `<span>自訂題目${(g.custom || []).length ? `・${g.custom.length} 題` : ''}</span>`;
+    $('startHint').innerHTML = n < 2 ? '<span class="wait"><i></i><i></i><i></i></span>'
+      : `<span>${SVG.person}${n}</span><span class="op">×</span><span>${per}</span><span class="op">=</span><span>${n * per} 回合</span>`;
+    $('startBtn').disabled = n < 2;
+  }
+  if (inGame) {
+    const key = g.gid + ':' + g.round;
+    if (key !== dialKey) { dialKey = key; localDial = 90; }
+    text($('roundTxt'), `第 ${g.round} / ${g.total} 回合`);
+    $('progBar').style.width = (100 * (g.round - (g.phase === 'reveal' ? 0 : 1)) / Math.max(1, g.total)) + '%';
+    $('teamTxt').classList.toggle('hide', g.mode !== 'coop');
+    $('teamTxt').innerHTML = SVG.star(16) + g.score;
+    renderTimer();
+    const ck = cardKey(g.card);
+    if (ck !== lastCard) {
+      const c = g.card || ['', ''];
+      text($('leftEnd'), c[0]); text($('rightEnd'), c[1]);
+      if (lastCard && !reduceMotion) { $('ends').classList.remove('flip'); void $('ends').offsetWidth; $('ends').classList.add('flip'); }
+      lastCard = ck;
+    }
+    if (g.phase === 'reveal') startReveal(g); else seq = null;
+    renderWheel();
+    const ct = $('clueTxt');
+    if ((g.clue || '') !== lastClue) { text(ct, g.clue || ''); if (g.clue && !reduceMotion) { ct.classList.remove('bounce'); void ct.offsetWidth; ct.classList.add('bounce'); } lastClue = g.clue || ''; }
+    $('clueForm').classList.toggle('hide', !(g.phase === 'clue' && amPsy));
+    const psyOn = OFF || on.includes(g.psychic), locked = lockedOf(g), need = guessersOf(g);
+    const say = $('sayTxt'); say.replaceChildren();
+    if (g.phase === 'clue' && !amPsy) say.append(faceEl(g.psychic), SVG.pen && '', '想線索中…');
+    if (g.phase === 'guess' && (amPsy || myLock(g) != null)) say.append(`${locked.length} / ${need.length}`);
+    if (!psyOn && g.phase !== 'reveal') { say.replaceChildren(faceEl(g.psychic), '離線了'); }
+    if (g.phase !== 'reveal') { $('resBox').classList.add('hide'); }
+    const act = $('actBox'); act.replaceChildren();
+    const btn = (icon, label, fn, cls) => { const b = el('button', cls || '', icon + `<span>${label}</span>`); b.onclick = fn; act.append(b); };
+    if (g.phase === 'clue' && amPsy) btn(SVG.shuffle, '換題', rerollCard, 'ghost small');
+    if (g.phase === 'guess' && !amPsy && myLock(g) == null) btn(SVG.lock, '鎖定', lockGuess);
+    if (g.phase === 'guess' && amPsy && !OFF && locked.length && locked.length < need.length) btn(SVG.eye, '揭曉', () => revealIfPsychic(true), 'ghost small');
+    if (g.phase === 'reveal' && seqDone(g)) btn(g.round >= g.total ? SVG.trophy : SVG.next, g.round >= g.total ? '結算' : '下一題', nextRound, 'pop');
+    if (!psyOn && g.phase !== 'reveal') btn(SVG.skip, '跳過', nextRound, 'ghost small');
+  }
+  if (g.phase === 'end' && endShown !== g.gid) { endShown = g.gid; renderEnd(g); }
+  if (OFF) renderHandoff(g);
+  revealIfPsychic(false);
+  announce(false);
+}
+
+// ---------- 結算 ----------
 function renderEnd(g) {
   const box = $('endBox'); box.replaceChildren();
-  const again = el('button', '', SVG.again + '<span>再來一局</span>'); again.id = 'againBtn';
-  again.onclick = () => game.set(p => ({ ...initialGame, host: p.host, pub: !!p.pub, per: p.per, phase: 'lobby' }));
+  const map = avatarMap();
+  const again = el('button', 'againBtn', SVG.again + '<span>再來一局</span>');
+  again.onclick = () => game.set(p => ({ ...initialGame, ...keepCfg(p), phase: 'lobby' }));
   if (g.mode === 'coop') {
-    const max = g.total * 4, ratio = g.score / max, starsOn = ratio >= .75 ? 3 : ratio >= .5 ? 2 : ratio >= .25 ? 1 : 0;
+    const max = g.total * 4, ratio = g.score / Math.max(1, max), starsOn = ratio >= .75 ? 3 : ratio >= .5 ? 2 : ratio >= .25 ? 1 : 0;
     const wrapEl = el('div', 'coopEnd');
-    const stars = el('div', 'stars', [0, 1, 2].map(i => SVG.star(44)).join(''));
+    const stars = el('div', 'stars', [0, 1, 2].map(() => SVG.star(44)).join(''));
     [...stars.children].forEach((s, i) => { if (i < starsOn) { s.classList.add('on'); s.style.animation = `zoom .5s ${0.9 + i * .25}s backwards`; } });
     const big = el('div', 'big'); const sub = el('div', 'say'); sub.textContent = `/ ${max}`;
     wrapEl.append(stars, big, sub); box.append(wrapEl, again);
@@ -921,35 +1324,33 @@ function renderEnd(g) {
     if (starsOn >= 2) setTimeout(() => confetti(box, 50), 1500);
     return;
   }
-  const ranked = [...new Set([...g.order, ...Object.keys(g.scores)])].sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
+  const ranked = shownIds(g).filter(id => g.order.includes(id)).sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
   const top = g.scores[ranked[0]] || 0, winners = ranked.filter(id => (g.scores[id] || 0) === top);
-  const head = el('div', 'winner'); head.style.opacity = '0';
+  const head = el('div', 'winner');
   head.append(winners.map(nameOf).join('、'));
   const sub = document.createElement('small'); sub.textContent = winners.length > 1 ? '平手' : '獲勝'; head.append(sub);
   const wrapEl = el('div', 'podium-wrap'), pod = el('div', 'podium');
-  const slots = [['second', ranked[1], 1], ['first', ranked[0], 2], ['third', ranked[2], 0]];
+  const slots = [['second', ranked[1], '72%'], ['first', ranked[0], '100%'], ['third', ranked[2], '50%']];
   const T = { third: 300, second: 1100, first: 1900 };
-  for (const [cls, id] of slots) {
-    const col = el('div', 'pcol ' + cls);
+  for (const [cls, id, h] of slots) {
+    const col = el('div', 'pcol ' + cls); col.style.setProperty('--h', h);
     if (id) {
-      const who = el('div', 'who'); who.append(avatarEl(id));
+      const who = el('div', 'who'); who.append(faceEl(id, map));
       const nm = document.createElement('small'); nm.textContent = nameOf(id); who.append(nm);
-      if ((g.scores[id] || 0) === top) { const cr = el('span', 'crown', SVG.crown(34)); cr.style.animation = `crown .7s ${T.first + 900}ms forwards`; who.append(cr); }
+      if ((g.scores[id] || 0) === top && top > 0) { const cr = el('span', 'crown', SVG.crown(34)); cr.style.animation = `crown .7s ${T.first + 900}ms forwards`; who.append(cr); }
       const bar = el('div', 'bar'); const rk = document.createElement('b'); rk.textContent = String(ranked.indexOf(id) + 1);
       const sc = document.createElement('span'), scn = document.createElement('em'); scn.style.fontStyle = 'normal';
       sc.innerHTML = SVG.star(14); sc.append(scn); bar.append(rk, sc);
       bar.style.animation = `grow .6s ${T[cls]}ms cubic-bezier(.2,.9,.3,1.1) forwards`;
       who.style.animation = `rise .45s ${T[cls] + 450}ms forwards`;
       countUp(scn, g.scores[id] || 0, T[cls] + 200);
-      col.append(who, bar);
+      col.append(bar, who);
     }
     pod.append(col);
   }
   wrapEl.append(pod);
   const rest = el('div', 'rest');
-  ranked.slice(3).forEach((id, i) => {
-    const d = document.createElement('div'); d.append(String(i + 4) + '.', avatarEl(id), `${g.scores[id] || 0}`); rest.append(d);
-  });
+  ranked.slice(3).forEach((id, i) => { const d = document.createElement('div'); d.append(`${i + 4}.`, faceEl(id, map), `${g.scores[id] || 0}`); rest.append(d); });
   if (ranked.length > 3) { rest.style.opacity = '0'; rest.style.animation = `fadeIn .4s ${T.first + 1400}ms forwards`; }
   box.append(head, wrapEl, rest, again);
   head.style.animation = `zoom .6s ${T.first + 1000}ms forwards`;
@@ -957,8 +1358,99 @@ function renderEnd(g) {
   setTimeout(() => confetti(box), T.first + 1000);
 }
 
-// ---------- 聊天 ----------
-let seen = null, joinedAt = Date.now(), unread = 0, lanes = [0, 0, 0, 0, 0];
+// ---------- 點頭像：自己→換頭像；房主點別人→踢人 ----------
+function onAvatarTap(id) {
+  if (OFF) return;
+  const g = G();
+  if (id === me) return openAvatarPicker(id, v => profile.set(p => ({ ...(p || {}), av: v })));
+  if (g.host === me) {
+    const box = el('div', 'kick');
+    box.append(faceEl(id));
+    const nm = el('b'); nm.textContent = nameOf(id); box.append(nm);
+    const acts = el('div', 'acts');
+    const k = el('button', 'ghost', '<span>請出房間</span><small>之後還可以再進來</small>');
+    const b = el('button', '', '<span>封鎖</span><small>這個房間永遠進不來</small>');
+    k.onclick = async () => { await kickPlayer(id, false); closeModal(); toast(`已請 ${nameOf(id)} 離開`); };
+    b.onclick = async () => { await kickPlayer(id, true); closeModal(); toast(`已封鎖 ${nameOf(id)}`); };
+    acts.append(k, b); box.append(acts);
+    openModal([box]);
+  }
+}
+function openAvatarPicker(id, onSave) {
+  const map = avatarMap(), mine = avOf(id, map);
+  const taken = new Set(Object.entries(map).filter(([k]) => k !== id).map(([, v]) => v));
+  let choice = mine, tab = isEmoji(mine) ? 'emo' : 'txt';
+  const h = el('h3'); h.textContent = '選擇頭像';
+  const prev = el('div', 'preview'), tabs = el('div', 'seg2 tabs'), pane = el('div'), err = el('p', 'hint'), ok = el('button', '', '確定');
+  ok.style.width = '100%'; ok.style.marginTop = '14px';
+  const drawPrev = () => {
+    const f = el('i', 'face' + (isEmoji(choice) ? ' emo' : Array.from(choice).length === 1 ? ' one' : ''));
+    f.style.background = isEmoji(choice) ? '#fff6e6' : colorOf(id); if (isEmoji(choice)) f.style.boxShadow = `inset 0 0 0 4px ${colorOf(id)}`;
+    f.textContent = choice || '?'; prev.replaceChildren(f);
+    const dup = taken.has(choice);
+    text(err, dup ? '已經有人用了，換一個吧' : ''); ok.disabled = !choice || dup;
+  };
+  const drawPane = () => {
+    tabs.replaceChildren(...[['txt', '文字'], ['emo', '動物']].map(([k, l]) => { const b = el('button'); b.type = 'button'; b.textContent = l; b.setAttribute('aria-pressed', String(tab === k)); b.onclick = () => { tab = k; drawPane(); }; return b; }));
+    if (tab === 'txt') {
+      const inp = el('input'); inp.type = 'text'; inp.placeholder = '1–2 個字'; inp.setAttribute('aria-label', '頭像文字');
+      inp.value = isEmoji(choice) ? '' : choice;
+      inp.oninput = () => { const v = Array.from(inp.value.trim()).filter(c => !isEmoji(c)).slice(0, 2).join(''); if (inp.value !== v) inp.value = v; choice = v; drawPrev(); };
+      const hint = el('p', 'hint'); hint.textContent = '預設會取你名字的兩個字，可以自己改成任何 1–2 個字。';
+      pane.replaceChildren(inp, hint);
+      if (isEmoji(choice)) { choice = ''; }
+    } else {
+      const grid = el('div', 'animals');
+      grid.replaceChildren(...ANIMALS.map(a => { const b = el('button'); b.type = 'button'; b.textContent = a; b.disabled = taken.has(a); b.setAttribute('aria-pressed', String(choice === a)); b.onclick = () => { choice = a; drawPane(); }; return b; }));
+      pane.replaceChildren(grid);
+    }
+    drawPrev();
+  };
+  ok.onclick = () => { if (!choice || taken.has(choice)) return; onSave(choice); closeModal(); };
+  const reset = el('button', 'ghost small', '用名字預設'); reset.type = 'button'; reset.style.marginTop = '8px'; reset.style.width = '100%';
+  reset.onclick = () => { onSave(''); closeModal(); };
+  drawPane();
+  openModal([h, prev, tabs, pane, err, ok, reset]);
+}
+function openCards(editable, getCfg, setCfg) {
+  const h = el('h3'); h.textContent = '自訂題目';
+  const list = el('div', 'cardsList'), hint = el('p', 'hint');
+  const l = el('input'), r = el('input'), add = el('button', 'icon', '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>');
+  l.type = r.type = 'text'; l.placeholder = '左端，例如：冷'; r.placeholder = '右端，例如：熱'; l.maxLength = r.maxLength = CARD_MAX;
+  add.setAttribute('aria-label', '新增題目');
+  const only = el('div', 'seg2');
+  const draw = () => {
+    const cfg = getCfg(), cards = cfg.custom || [];
+    list.replaceChildren(...cards.map((c, i) => {
+      const d = el('div'), s = el('span'); s.textContent = `${c[0]} ↔ ${c[1]}`; d.append(s);
+      if (editable) { const x = el('button', '', '✕'); x.setAttribute('aria-label', '刪除'); x.onclick = () => setCfg({ custom: cards.filter((_, j) => j !== i) }).then(draw); d.append(x); }
+      return d;
+    }));
+    if (!cards.length) { const d = el('p', 'hint'); d.textContent = editable ? '還沒有自訂題目。輸入左右兩端的詞，例如「冷」和「熱」。' : '房主還沒有加自訂題目。'; list.append(d); }
+    const mk = (val, label) => { const b = el('button'); b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', String(!!cfg.customOnly === val)); b.disabled = !editable; b.onclick = () => setCfg({ customOnly: val }).then(draw); return b; };
+    only.replaceChildren(mk(false, '混入內建 270 題'), mk(true, '只用自訂題目'));
+    only.classList.toggle('ro', !editable);
+    text(hint, cfg.customOnly && cards.length < 3 ? '自訂題目太少時，用完會重複出現。' : '');
+  };
+  add.onclick = () => {
+    const a = l.value.trim(), b = r.value.trim();
+    if (!a || !b) { (a ? r : l).focus(); return; }
+    const cards = getCfg().custom || [];
+    if (cards.length >= 60) return toast('最多 60 題');
+    setCfg({ custom: [...cards, [a, b]] }).then(() => { l.value = r.value = ''; l.focus(); draw(); });
+  };
+  r.addEventListener('keydown', e => { if (e.key === 'Enter') add.click(); });
+  l.addEventListener('keydown', e => { if (e.key === 'Enter') r.focus(); });
+  draw();
+  const nodes = [h, list];
+  if (editable) { const row1 = el('div', 'row'); row1.append(l); const row2 = el('div', 'row'); row2.style.marginTop = '8px'; row2.append(r, add); nodes.push(row1, row2); }
+  const lab = el('div', 'lbl'); lab.textContent = '出題方式';
+  nodes.push(lab, only, hint);
+  openModal(nodes);
+}
+
+// ---------- 聊天與彈幕 ----------
+let seen = null, unread = 0, lanes = [0, 0, 0, 0, 0];
 function chatList() {
   const list = [];
   for (const [id, arr] of Object.entries(chat ? chat.getAll() : {})) for (const m of arr || []) list.push({ ...m, id, k: id + ':' + m.t });
@@ -967,94 +1459,139 @@ function chatList() {
 const chatOpen = () => document.body.classList.contains('chat-on');
 function setUnread(n) { unread = n; $('badge').classList.toggle('hide', !n); text($('badge'), n > 99 ? '99+' : String(n)); }
 function fly(m) {
-  const box = $('danmaku'), W = box.clientWidth, H = box.clientHeight;
-  const now = Date.now();
+  const box = $('danmaku'), W = box.clientWidth, H = box.clientHeight, now = Date.now();
   let lane = lanes.indexOf(Math.min(...lanes));
   const free = lanes.findIndex(t => t < now); if (free !== -1) lane = free;
-  const s = document.createElement('span'), av = avatarEl(m.id);
-  s.append(av, String(m.x));
+  const s = document.createElement('span');
+  s.append(faceEl(m.id), String(m.x));
   s.style.top = (Math.max(6, H * 0.03) + lane * 38) + 'px';
   box.append(s);
   const w = s.offsetWidth, dur = 11000 + Math.min(String(m.x).length, 40) * 80;
   lanes[lane] = now + dur * (w + 40) / (W + w);
   if (reduceMotion) { s.style.transform = `translateX(${Math.max(8, (W - w) / 2)}px)`; setTimeout(() => s.remove(), 3500); return; }
-  const anim = s.animate([{ transform: `translateX(${W}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, easing: 'linear' });
-  anim.onfinish = () => s.remove();
+  s.animate([{ transform: `translateX(${W}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, easing: 'linear' }).onfinish = () => s.remove();
 }
 function renderChat() {
+  if (OFF) return;
   const list = chatList();
   if (seen === null) seen = new Set(list.map(m => m.k));
   else for (const m of list) if (!seen.has(m.k)) { seen.add(m.k); if (!chatOpen() && m.t > joinedAt - 3000) { fly(m); if (m.id !== me) setUnread(unread + 1); } }
   const box = $('msgs');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   if (!list.length) { box.replaceChildren(el('div', 'empty', SVG.chat)); return; }
-  let prev = null;
+  let prev = null; const map = avatarMap();
   box.replaceChildren(...list.slice(-150).map(m => {
     const row = el('div', 'msg' + (m.id === me ? ' me' : '') + (prev === m.id ? ' cont' : ''));
     prev = m.id;
-    const av = avatarEl(m.id); av.title = nameOf(m.id);
+    const f = faceEl(m.id, map); f.title = nameOf(m.id);
     const p = document.createElement('p'); p.textContent = String(m.x);
-    row.append(av, p); return row;
+    row.append(f, p); return row;
   }));
   if (atBottom || list[list.length - 1].id === me) box.scrollTop = box.scrollHeight;
 }
 function toggleChat(open) {
   document.body.classList.toggle('chat-on', open);
+  document.body.classList.toggle('scrim-on', open || $('modal').classList.contains('on'));
+  $('chatWin').classList.toggle('on', open);
   $('chatOpen').setAttribute('aria-expanded', String(open));
   $('chatWin').setAttribute('aria-hidden', String(!open));
   if (open) { setUnread(0); $('danmaku').replaceChildren(); const box = $('msgs'); box.scrollTop = box.scrollHeight; }
 }
 
-// ---------- 連線狀態：房號旁的燈＋頭像斷線標示 ----------
-let lastErr = 0, lastErrCode = '';
-const ICON_LOST = '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M3 3l18 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+// ---------- 連線狀態 ----------
+let lastErr = 0;
 function netState() {
-  if (!room) return { cls: 'idle' };
+  if (!room || OFF) return { cls: 'idle' };
   const g = G(), peers = online().length - 1;
-  const expected = [...new Set(g.order)].filter(id => id !== me);
-  const lost = expected.filter(id => !online().includes(id));
+  const lost = shownIds(g).filter(id => id !== me && !isOn(id));
   const st = room.status ? room.status() : { relays: 1, relayTotal: 1, p2p: 0 };
   const recentErr = Date.now() - lastErr < 15000;
-  if (!navigator.onLine) return { cls: 'bad', title: '網路斷了', hint: '檢查 Wi-Fi 或行動網路', fix: true, lost, st };
-  if (st.relays === 0 && st.p2p === 0) return { cls: 'bad', title: '連不上伺服器', hint: '正在自動重試，也可以按下面重新連線', fix: true, lost, st };
-  if (lost.length) return { cls: 'warn', title: '有人斷線', hint: '灰色頭像的玩家暫時連不上，會自動重連', fix: false, lost, st };
-  if (st.relays < st.relayTotal && recentErr) return { cls: 'warn', title: '線路切換中', hint: '有一條線路斷了，其他線路還在', fix: false, lost, st };
-  if (peers === 0) return { cls: 'idle', title: '等朋友加入', hint: '', lost, st };
-  return { cls: '', title: '連線正常', hint: '', lost, st };
+  if (!navigator.onLine) return { cls: 'bad', title: '網路斷了', hint: '檢查 Wi-Fi 或行動網路', fix: true, st };
+  if (st.relays === 0 && st.p2p === 0) return { cls: 'bad', title: '連不上伺服器', hint: '正在自動重試，也可以按下面重新連線', fix: true, st };
+  if (lost.length) return { cls: 'warn', title: '有人斷線', hint: '灰色頭像的玩家暫時連不上，會自動重連', st };
+  if (st.relays < st.relayTotal && recentErr) return { cls: 'warn', title: '線路切換中', hint: '有一條線路斷了，其他線路還在', st };
+  if (peers === 0) return { cls: 'idle', title: '等朋友加入', hint: '', st };
+  return { cls: '', title: '連線正常', hint: '', st };
 }
 function renderNet() {
   const st = netState();
-  $('netDot').className = 'dot ' + st.cls;
-  $('netDot2').className = 'dot ' + st.cls;
-  text($('netTitle'), st.title || '');
-  text($('netHint'), st.hint || '');
+  $('netDot').className = 'dot ' + st.cls; $('netDot2').className = 'dot ' + st.cls;
+  text($('netTitle'), st.title || ''); text($('netHint'), st.hint || '');
   $('netHint').classList.toggle('hide', !st.hint);
   $('reconnectBtn').classList.toggle('hide', !st.fix);
-  if (st.st) { const L = $('netLines'); L.replaceChildren(...Array.from({ length: st.st.relayTotal }, (_, i) => { const b = document.createElement('b'); b.className = i < st.st.relays ? 'up' : ''; b.title = '中繼線路'; return b; }), (() => { const b = document.createElement('b'); b.className = 'p2p' + (st.st.p2p ? ' up' : ''); b.title = 'P2P 直連'; return b; })()); }
-  if (room) {
-    const on = online(), ids = [...new Set([...G().order, ...on])];
-    $('netPeers').replaceChildren(...ids.map(id => { const i = avatarEl(id); if (!on.includes(id)) i.className = 'lost'; i.title = nameOf(id); return i; }));
-  }
+  if (st.st) $('netLines').replaceChildren(...Array.from({ length: st.st.relayTotal }, (_, i) => el('b', i < st.st.relays ? 'up' : '')), el('b', 'p2p' + (st.st.p2p ? ' up' : '')));
+  if (room && !OFF) { const map = avatarMap(); $('netPeers').replaceChildren(...shownIds().map(id => { const f = faceEl(id, map, isOn(id) ? '' : 'lostf'); f.title = nameOf(id); return f; })); }
 }
-function toggleNet(open) {
-  $('netCard').classList.toggle('on', open);
-  $('roomChip').setAttribute('aria-expanded', String(open));
-  if (open) renderNet();
+function toggleNet(open) { $('netCard').classList.toggle('on', open); $('roomChip').setAttribute('aria-expanded', String(open)); if (open) renderNet(); }
+
+// ---------- 公開房間：由在線玩家中 id 最小者定時貼簡介 ----------
+async function announce(force) {
+  if (!room || OFF) return;
+  const g = G(), on = online().sort();
+  if (on[0] !== me) return;
+  lobbyBus = lobbyBus || await lobbyConnect();
+  if (!g.pub) { if (lastAnn && lastAnn !== 'off') lobbyBus.publish(code, null); lastAnn = 'off'; return; }
+  const map = avatarMap();
+  const info = { v: 2, name: clipUnits(g.name || '', NAME_MAX), host: nameOf(g.host || me).slice(0, 12), players: online().slice(0, 10).map(id => ({ n: avOf(id, map), c: colorOf(id) })),
+    phase: g.phase, round: g.round, total: g.total, t: Date.now() };
+  const sig = JSON.stringify({ ...info, t: 0 });
+  if (!force && sig === lastAnn) return;
+  lastAnn = sig; lobbyBus.publish(code, info);
+}
+const lobbyRooms = {};
+function renderRooms() {
+  const box = $('roomList'); const now = Date.now();
+  const list = Object.entries(lobbyRooms).filter(([, i]) => i && now - i.t < 60000 && now - i.t > -60000)
+    .sort((a, b) => (a[1].phase === 'lobby' ? 0 : 1) - (b[1].phase === 'lobby' ? 0 : 1) || b[1].t - a[1].t);
+  if (!list.length) { box.innerHTML = `<div class="none">${SVG.globe.replace(/18/g, '30')}<span>目前沒有公開房間<br>建立一個公開房間，朋友就能在這裡找到你</span></div>`; return; }
+  box.replaceChildren(...list.map(([c, i]) => {
+    const b = el('button', 'room');
+    const nm = el('span', 'nm'), t1 = el('b'), t2 = el('span');
+    t1.textContent = clipUnits(String(i.name || ''), NAME_MAX) || `${String(i.host || '玩家').slice(0, 12)} 的房間`; t2.textContent = c; nm.append(t1, t2);
+    const faces = el('span', 'faces');
+    const pl = Array.isArray(i.players) ? i.players : [];
+    pl.slice(0, 5).forEach(p => { const v = String((p && p.n) || '?').slice(0, 4); const f = el('i', 'face' + (isEmoji(v) ? ' emo' : '')); f.textContent = v; f.style.background = isEmoji(v) ? '#fff6e6' : (COLORS.includes(p && p.c) ? p.c : COLORS[7]); faces.append(f); });
+    const st = el('span', 'st' + (i.phase && i.phase !== 'lobby' ? ' live' : ''));
+    st.innerHTML = (pl.length >= 3 ? SVG.pk : SVG.coop);
+    if (i.phase === 'lobby') st.append(` ${pl.length}`);
+    else st.append(` ${Number(i.round) || 0}/${Number(i.total) || 0}`);
+    b.append(nm, faces, st);
+    b.setAttribute('aria-label', `加入 ${t1.textContent}`);
+    b.onclick = () => enter(c);
+    return b;
+  }));
 }
 
-// ---------- 進房 ----------
+// ---------- 進出房間 ----------
 function newCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({ length: 4 }, () => A[Math.floor(Math.random() * A.length)]).join(''); }
 function hashCode() { const h = location.hash.slice(1).toUpperCase(); return /^[A-Z0-9]{4,6}$/.test(h) ? h : ''; }
 function roomLink() { return location.href.split('#')[0] + '#' + code; }
+function kickOut(msg) {
+  try { sessionStorage.setItem('wl:msg', msg); } catch {}
+  const r = room; room = null;
+  Promise.resolve(r && r.leave && r.leave()).finally(() => location.replace(location.pathname + location.search));
+}
+const tabBus = 'BroadcastChannel' in window ? new BroadcastChannel('wl-tab') : null;
+if (tabBus) tabBus.onmessage = ({ data: m }) => {
+  if (!room || OFF || params.has('local') || !m || m.code !== code || m.tab === tabId) return;
+  // 同一個瀏覽器在別的分頁打開了同一個座位：這邊讓出
+  const r = room; room = null; try { r.leave(); } catch {}
+  const h = el('h3'); h.textContent = '已在其他分頁開啟';
+  const p = el('p', 'hint'); p.textContent = '同一個瀏覽器只能用一個分頁坐同一個位子。';
+  const b = el('button', '', '在這裡繼續'); b.style.width = '100%'; b.style.marginTop = '12px';
+  b.onclick = () => { try { sessionStorage.setItem('wl:auto', code); } catch {} location.reload(); };
+  openModal([h, p, b]);
+};
 
-async function enter(c, creating = false) {
+async function enter(c, cfg) {
   const name = $('nameIn').value.trim();
-  if (!name) { $('nameIn').focus(); $('nameIn').animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250, iterations: 2 }); return; }
+  if (!name) { showView('homeView'); $('nameIn').focus(); $('nameIn').animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250, iterations: 2 }); return; }
   store.set('wl:name', name);
-  code = c;
+  code = c; OFF = false;
   if (location.hash.slice(1) !== c) history.replaceState(null, '', '#' + c);
   $('joinErr').innerHTML = '<span class="eq"><span class="wait"><i></i><i></i><i></i></span></span>';
   try { room = await connect(code); } catch (e) { room = null; text($('joinErr'), '連線元件載入失敗，請檢查網路'); return; }
+  if (tabBus && !params.has('local')) tabBus.postMessage({ code, tab: tabId });
   me = (await room.getSelf()).userId;
   joinedAt = Date.now();
   game = room.makeState('game', initialGame);
@@ -1062,24 +1599,83 @@ async function enter(c, creating = false) {
   profile = room.makeUserState('profile', { name });
   chat = room.makeUserState('chat', []);
   guessSt = room.makeUserState('guess', null);
-  await profile.set({ name });
+  const old = profile.get(me);
+  await profile.set({ name, av: old && old.name === name ? old.av || '' : '' });
   game.onChange(render); guessSt.onChange(render);
   dial.onChange(() => { if (!dragging && G().psychic === me) renderWheel(); });
   profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
   if (room.onStatus) room.onStatus(renderNet);
   room.onUserJoin(() => { render(); renderNet(); }); room.onUserLeave(() => { render(); renderNet(); });
-  room.onError(e => { lastErr = Date.now(); lastErrCode = e && e.code ? e.code : ''; renderNet(); });
+  room.onError(() => { lastErr = Date.now(); renderNet(); });
   setInterval(renderNet, 3000);
   addEventListener('online', renderNet); addEventListener('offline', renderNet);
-  $('joinView').classList.add('hide');
-  ['gameView', 'people', 'chatBar', 'roomChip'].forEach(id => $(id).classList.remove('hide'));
-  text($('roomCode'), code);
-  render(); renderChat(); renderNet();
-  if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer, pub: wantPub }));
+  text($('roomCode'), code); text($('joinErr'), '');
+  showView('gameView'); render(); renderChat(); renderNet();
+  if (cfg) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, ...cfg }));
   setInterval(() => announce(true), 20000);
-  addEventListener('pagehide', () => { if (G().pub && online().length <= 1 && lobbyBus) lobbyBus.publish(code, null); });
+  addEventListener('pagehide', () => { if (room && G().pub && online().length <= 1 && lobbyBus) lobbyBus.publish(code, null); });
+  setTimeout(() => { kickSeen = G().kicked && G().kicked[me]; kickArmed = true; if (banned(G(), me)) kickOut('你已被房主封鎖，無法再進入這個房間'); }, 1200);
 }
 
+// ---------- 離線模式 ----------
+let offResumeData = null;
+function offlineInit(saved) {
+  const resume = !!saved;
+  OFF = true; code = 'OFFLINE'; me = null;
+  room = offlineRoom(saved);
+  game = room.makeState('game', initialGame);
+  dial = room.makeState('dial', 90);
+  profile = room.makeUserState('profile', null);
+  chat = room.makeUserState('chat', []);
+  guessSt = room.makeUserState('guess', null);
+  game.onChange(render); guessSt.onChange(render); profile.onChange(render);
+  if (!resume) {
+    const prevPlayers = (() => { try { return JSON.parse(store.get('wl:offPlayers') || '[]'); } catch { return []; } })();
+    prevPlayers.slice(0, 8).forEach(p => room.addPlayer('p' + Math.random().toString(36).slice(2, 8), p));
+    game.set({ ...initialGame, per: wantPer, custom: (() => { try { return JSON.parse(store.get('wl:offCards') || '[]'); } catch { return []; } })() });
+  }
+  render();
+}
+function savedOffline() { try { const s = JSON.parse(store.get('wl:offline') || 'null'); return s && s.S && s.S.game && ['clue', 'guess', 'reveal'].includes(s.S.game.phase) ? s : null; } catch { return null; } }
+function renderOffline() {
+  const g = G(), ids = room.players(), map = avatarMap();
+  text($('offCount'), `${ids.length} / 8`);
+  $('offPlayers').replaceChildren(...ids.map(id => {
+    const row = el('div', 'pl'), ab = el('button', 'avbtn'); ab.type = 'button'; ab.setAttribute('aria-label', `更換 ${nameOf(id)} 的頭像`);
+    ab.append(faceEl(id, map)); ab.onclick = () => openAvatarPicker(id, v => room.addPlayer(id, { ...profile.get(id), av: v }));
+    const nm = el('b'); nm.textContent = nameOf(id);
+    const rm = el('button', 'rm', '✕'); rm.type = 'button'; rm.setAttribute('aria-label', `移除 ${nameOf(id)}`); rm.onclick = () => { room.removePlayer(id); saveOffPlayers(); };
+    row.append(ab, nm, rm); return row;
+  }));
+  if (!ids.length) { const p = el('p', 'hint'); p.textContent = '先加入至少 2 位玩家。2 人是合作模式，3 人以上是對戰模式。'; $('offPlayers').append(p); }
+  stepper($('offPer'), PERS, g.per || 2, fmtPer, true, v => { store.set('wl:per', String(v)); game.set(p => ({ ...p, per: v })); });
+  $('offCards').innerHTML = SVG.cards + `<span>自訂題目${(g.custom || []).length ? `・${g.custom.length} 題` : ''}</span>`;
+  $('offStart').disabled = ids.length < 2;
+  $('offAdd').disabled = ids.length >= 8;
+  $('offResume').classList.toggle('hide', !offResumeData);
+}
+function saveOffPlayers() { store.set('wl:offPlayers', JSON.stringify(room.players().map(id => profile.get(id)))); }
+// 輪到誰操作：出題者 → 猜題者一個一個 → 大家一起看揭曉
+function needActor(g) {
+  if (g.phase === 'clue') return g.psychic;
+  if (g.phase === 'guess') { const locked = lockedOf(g); return g.order.find(id => id !== g.psychic && !locked.includes(id)) || null; }
+  return null;
+}
+function renderHandoff(g) {
+  const who = needActor(g), box = $('handoff');
+  if (!who || who === me) { box.classList.add('hide'); return; }
+  const map = avatarMap();
+  box.replaceChildren();
+  const p1 = el('p'); p1.textContent = '把手機交給';
+  const h = el('h2'); h.textContent = nameOf(who);
+  const role = el('span', 'role', who === g.psychic ? SVG.pen(15) + '出題' : SVG.lock + '猜題');
+  const b = el('button', '', `我是 ${esc(nameOf(who))}`);
+  b.onclick = () => { me = who; localDial = 90; dialKey = ''; box.classList.add('hide'); render(); };
+  box.append(faceEl(who, map), p1, h, role, b);
+  box.classList.remove('hide');
+}
+
+// ---------- 首頁 ----------
 $('nameIn').value = store.get('wl:name') || '';
 function showJoin() {
   const h = hashCode();
@@ -1087,78 +1683,76 @@ function showJoin() {
   $('hashBox').classList.toggle('hide', !h);
   text($('hashCode'), h);
 }
-// 大廳列表
-const lobbyRooms = {};
-function renderRooms() {
-  const box = $('roomList'); if (!box) return;
-  const now = Date.now();
-  const list = Object.entries(lobbyRooms).filter(([c, i]) => i && now - i.t < 60000 && now - i.t > -60000)
-    .sort((a, b) => (a[1].phase === 'lobby' ? 0 : 1) - (b[1].phase === 'lobby' ? 0 : 1) || b[1].t - a[1].t);
-  if (!list.length) { box.innerHTML = `<div class="none">${ICON_GLOBE.replace(/18/g, '30')}<span>目前沒有公開房間</span></div>`; return; }
-  box.replaceChildren(...list.map(([c, i]) => {
-    const b = el('button', 'room');
-    const cd = el('span', 'code'); cd.textContent = c;
-    const faces = el('span', 'faces');
-    (Array.isArray(i.players) ? i.players : []).slice(0, 6).forEach(pl => {
-      const f = document.createElement('i'); f.textContent = String(pl && pl.n || '?').slice(0, 2);
-      f.style.background = COLORS.includes(pl && pl.c) ? pl.c : COLORS[7]; faces.append(f);
-    });
-    const n = Array.isArray(i.players) ? i.players.length : 0;
-    const st = el('span', 'st' + (i.phase && i.phase !== 'lobby' ? ' live' : ''));
-    if (i.phase === 'lobby') st.innerHTML = SVG.person.replace(/22/g, '16') + `<em style="font-style:normal">${n}</em>`;
-    else { st.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>'; st.append(`${Number(i.round) || 0}/${Number(i.total) || 0}`); }
-    const go = el('span', 'go', SVG.next);
-    b.append(cd, faces, st, go);
-    b.setAttribute('aria-label', `加入房間 ${c}`);
-    b.onclick = () => enter(c);
-    return b;
-  }));
-}
 lobbyConnect().then(bus => { lobbyBus = bus; bus.on((c, info) => { if (!/^[A-Z0-9]{4,6}$/.test(c)) return; if (info && typeof info === 'object' && typeof info.t === 'number') lobbyRooms[c] = info; else delete lobbyRooms[c]; if (!room) renderRooms(); }); });
 setInterval(() => { if (!room) renderRooms(); }, 10000);
 renderRooms();
-renderPriv($('privPick'), wantPub, true);
-
 showJoin();
+try { const msg = sessionStorage.getItem('wl:msg'); sessionStorage.removeItem('wl:msg'); if (msg) text($('joinErr'), msg); } catch {}
 try { const auto = sessionStorage.getItem('wl:auto'); sessionStorage.removeItem('wl:auto'); if (auto && auto === hashCode() && $('nameIn').value.trim()) setTimeout(() => enter(auto), 0); } catch {}
-renderSeg($('perPick'), wantPer, true);
-$('createBtn').onclick = () => enter(newCode(), true);
+
+// 建立房間畫面
+function drawCreate() {
+  privSeg($('privPick'), wantPub, true, v => { wantPub = v; store.set('wl:pub', v ? '1' : '0'); drawCreate(); });
+  text($('privHint'), wantPub ? '公開：房間會出現在首頁的公開房間列表，任何人都能點進來。' : '私人：不會出現在列表上，只有拿到 4 碼房號或邀請連結的人能進來。');
+  stepper($('perPick'), PERS, wantPer, fmtPer, true, v => { wantPer = v; store.set('wl:per', String(v)); drawCreate(); });
+  stepper($('timerPick'), TIMERS, wantTimer, fmtTimer, true, v => { wantTimer = v; store.set('wl:timer', String(v)); drawCreate(); });
+  text($('roomNameCount'), `${Math.ceil(units($('roomNameIn').value) / 2)} / 8`);
+}
+$('roomNameIn').addEventListener('input', () => { const v = clipUnits($('roomNameIn').value, NAME_MAX); if (v !== $('roomNameIn').value) $('roomNameIn').value = v; drawCreate(); });
+$('toCreate').onclick = () => { if (!$('nameIn').value.trim()) { $('nameIn').focus(); return; } showView('createView'); drawCreate(); };
+$('toOffline').onclick = () => { offResumeData = savedOffline(); offlineInit(null); };
+document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { if (OFF) { room = null; OFF = false; game = null; } showView('homeView'); setTitle(); });
+$('createBtn').onclick = () => enter(newCode(), { per: wantPer, pub: wantPub, timer: wantTimer, name: clipUnits($('roomNameIn').value.trim(), NAME_MAX) });
 $('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { $('codeIn').focus(); return; } enter(c); };
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinCodeBtn').click(); });
-$('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') (hashCode() ? $('joinHashBtn') : $('createBtn')).click(); });
 $('joinHashBtn').onclick = () => enter(hashCode());
 $('otherBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); showJoin(); };
+
+// 離線設定畫面
+$('offAdd').onclick = () => {
+  const n = $('offName').value.trim(); if (!n || room.players().length >= 8) { $('offName').focus(); return; }
+  room.addPlayer('p' + Math.random().toString(36).slice(2, 8), { name: n.slice(0, 12), av: '' });
+  $('offName').value = ''; $('offName').focus(); saveOffPlayers();
+};
+$('offName').addEventListener('keydown', e => { if (e.key === 'Enter') $('offAdd').click(); });
+$('offStart').onclick = () => { store.set('wl:offCards', JSON.stringify(G().custom || [])); me = null; startGame(); };
+$('offResume').onclick = () => { const d = offResumeData; offResumeData = null; if (d) offlineInit(d); };
+$('offCards').onclick = () => openCards(true, () => G(), async patch => { await game.set(p => ({ ...p, ...patch })); store.set('wl:offCards', JSON.stringify(G().custom || [])); });
+
+// 房內
 $('startBtn').onclick = startGame;
-// 線索送出：用 pointerdown 避免鍵盤收起造成版面跳動而按不到
+$('cardsBtn').onclick = () => openCards(isHost(), () => G(), patch => game.set(p => ({ ...p, ...patch })));
 $('clueBtn').addEventListener('pointerdown', e => { e.preventDefault(); sendClue(); });
 $('clueBtn').onclick = e => { if (e.detail === 0) sendClue(); };
+$('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
 $('clueIn').addEventListener('focus', () => document.body.classList.add('typing'));
 $('clueIn').addEventListener('blur', () => document.body.classList.remove('typing'));
 $('chatIn').addEventListener('focus', () => document.body.classList.add('chatting'));
 $('chatIn').addEventListener('blur', () => document.body.classList.remove('chatting'));
-$('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
 $('copyBtn').onclick = async () => {
   const lbl = $('copyBtn').querySelector('span');
-  try { await navigator.clipboard.writeText(roomLink()); lbl.textContent = '已複製'; }
+  try { await navigator.clipboard.writeText(roomLink()); lbl.textContent = '已複製連結'; }
   catch { lbl.textContent = code; }
   setTimeout(() => { lbl.textContent = '邀請'; }, 2000);
 };
 $('chatBar').addEventListener('submit', async e => {
   e.preventDefault();
   const x = $('chatIn').value.trim();
-  if (!x || !chat) return;
+  if (!x || !chat || OFF) return;
   $('chatIn').value = '';
   await chat.set(prev => [...(prev || []), { t: Date.now(), x }].slice(-40));
 });
 $('chatOpen').onclick = () => toggleChat(!chatOpen());
+$('chatClose').onclick = () => toggleChat(false);
+$('modalClose').onclick = closeModal;
+$('scrim').onclick = () => { if ($('modal').classList.contains('on')) closeModal(); else toggleChat(false); };
+addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('modal').classList.contains('on')) closeModal(); else if (chatOpen()) toggleChat(false); } });
 $('roomChip').onclick = e => { e.stopPropagation(); toggleNet(!$('netCard').classList.contains('on')); };
 document.addEventListener('pointerdown', e => { if ($('netCard').classList.contains('on') && !e.target.closest('#netCard, #roomChip')) toggleNet(false); });
 $('reconnectBtn').onclick = () => { try { sessionStorage.setItem('wl:auto', code); } catch {} location.reload(); };
-$('chatClose').onclick = () => toggleChat(false);
-$('scrim').onclick = () => toggleChat(false);
-addEventListener('keydown', e => { if (e.key === 'Escape' && chatOpen()) toggleChat(false); });
+setInterval(tick, 500);
 
-// 手機鍵盤彈出時，讓整個版面貼齊可見區域，上下列保持固定
+// 手機鍵盤彈出時，讓整個版面貼齊可見區域
 const vv = window.visualViewport;
 function fitViewport() {
   const h = vv ? vv.height : innerHeight;
@@ -1172,7 +1766,7 @@ fitViewport();
 const wheel = $('wheel');
 wheel.addEventListener('pointerdown', e => { if (!canDrag()) return; dragging = true; wheel.setPointerCapture(e.pointerId); pushDial(angleFromEvent(e)); });
 wheel.addEventListener('pointermove', e => { if (dragging) pushDial(angleFromEvent(e)); });
-const endDrag = () => { if (!dragging) return; dragging = false; if (G().mode === 'coop') dial.set(Math.round(localDial)); };
+const endDrag = () => { if (!dragging) return; dragging = false; if (G().mode === 'coop' && !OFF) dial.set(Math.round(localDial)); };
 wheel.addEventListener('pointerup', endDrag); wheel.addEventListener('pointercancel', endDrag);
 wheel.addEventListener('keydown', e => {
   if (!canDrag()) return;
@@ -1180,6 +1774,8 @@ wheel.addEventListener('keydown', e => {
   if (d) { e.preventDefault(); pushDial(clamp(localDial + d * (e.shiftKey ? 5 : 1), 0, 180)); }
 });
 addEventListener('hashchange', () => { if (!room) showJoin(); });
+showView('homeView');
+if (DEV) window.__wl = { G: () => G(), me: () => me, avatarMap: () => avatarMap(), seq: () => seq };
 }
 </script>
 </body>
