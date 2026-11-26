@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>同頻轉盤</title>
+<meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高，附聊天室。">
+<style>
+  /* VOICE  熱鬧的派對桌遊，但介面乾淨
+     IDEA   實體桌遊的半圓轉盤與擋板
+     PICTURE 轉盤本身就是主畫面
+     COLOUR 深青底、奶油色盤面、黃橘紅得分區
+     LAYOUT 手機單欄：上方轉盤與操作，下方玩家與聊天室 */
+  :root { --bg: #0e3b3d; --bg2: #13494b; --panel: #fbf4e6; --ink: #1f2a2b; --muted: #6b7778; --line: #e6dcc8;
+          --z2: #f4c542; --z3: #f28c38; --z4: #e2483d; --accent: #e2483d; --ok: #2f8f6a; }
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--panel); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+         min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: clip; }
+  nav.games { width: 100%; max-width: 520px; padding: 10px 16px 0; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  nav.games a.home { display: inline-flex; align-items: center; gap: 4px; color: var(--panel); text-decoration: none; font-weight: 700; padding: 6px 8px 6px 2px; }
+  header { width: 100%; max-width: 520px; padding: 2px 16px 8px; display: flex; align-items: center; gap: 10px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px; flex: 1; }
+  .chip { background: var(--bg2); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  main { width: 100%; max-width: 520px; padding: 0 12px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); color: var(--ink); border-radius: 18px; padding: 16px; box-shadow: 0 6px 0 #0006; }
+  .card h2 { margin: 0 0 10px; font-size: 17px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  label { display: block; font-size: 14px; font-weight: 700; margin: 10px 0 4px; }
+  input[type=text] { width: 100%; font-size: 16px; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
+  input[type=text]:focus { outline: none; border-color: var(--z3); }
+  button { font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 11px 16px; min-height: 44px; cursor: pointer;
+           background: var(--accent); color: #fff; box-shadow: 0 3px 0 #0004; }
+  button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0004; }
+  button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
+  button.small { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--z2); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row > input { flex: 1; }
+  .hide { display: none !important; }
+
+  .status { display: flex; justify-content: space-between; font-weight: 800; font-size: 15px; margin-bottom: 6px; }
+  .wheelbox { position: relative; }
+  #wheel { width: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #wheel.drag { cursor: grab; }
+  .ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
+  .ends div { flex: 1; font-weight: 900; font-size: 17px; padding: 8px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); }
+  .ends div:last-child { text-align: right; }
+  .ends small { display: block; font-size: 12px; color: var(--muted); font-weight: 700; }
+  .clue { text-align: center; font-size: 22px; font-weight: 900; margin: 12px 0 4px; min-height: 33px; overflow-wrap: anywhere; }
+  .clue small { display: block; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .say { text-align: center; font-weight: 800; color: var(--muted); margin: 6px 0; }
+  .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .big { font-size: 40px; font-weight: 900; text-align: center; line-height: 1.1; }
+  .pts { text-align: center; font-size: 22px; font-weight: 900; margin-top: 6px; }
+
+  .players { display: flex; gap: 6px; flex-wrap: wrap; }
+  .players span { background: #fff; box-shadow: inset 0 0 0 2px var(--line); border-radius: 999px; padding: 4px 10px; font-size: 14px; font-weight: 700; }
+  .players span.psy { background: var(--z2); box-shadow: none; }
+  .players span.off { opacity: .45; }
+
+  .chat { display: flex; flex-direction: column; gap: 8px; }
+  #msgs { height: 200px; overflow-y: auto; background: #fff; border-radius: 12px; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; font-size: 15px; }
+  #msgs p { margin: 0 0 6px; overflow-wrap: anywhere; }
+  #msgs b { margin-right: 6px; }
+  #msgs .me b { color: var(--accent); }
+  #msgs .empty { color: var(--muted); text-align: center; margin-top: 70px; }
+  .share { word-break: break-all; font-size: 13px; color: var(--muted); }
+  .log { font-size: 14px; margin: 8px 0 0; padding: 0; list-style: none; }
+  .log li { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding: 5px 0; }
+  .log li b { white-space: nowrap; }
+  .net { font-size: 13px; text-align: center; color: #cfe3e2; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<nav class="games"><a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>首頁</span></a></nav>
+<header>
+  <h1>同頻轉盤</h1>
+  <span class="chip hide" id="roomChip"></span>
+</header>
+
+<main>
+  <!-- 進入畫面 -->
+  <section class="card" id="joinView">
+    <h2>線上版 Wavelength</h2>
+    <p class="muted" style="margin:0">輪流當出題者：出題者看得到目標區，給一個線索；其他人一起轉指針，越接近中心分數越高。2 人以上就能玩。</p>
+    <label for="nameIn">你的暱稱</label>
+    <input type="text" id="nameIn" maxlength="12" placeholder="例如：小明" autocomplete="nickname">
+    <div id="newBox">
+      <div class="actions" style="justify-content:flex-start;margin-top:14px"><button id="createBtn">建立新房間</button></div>
+      <label for="codeIn">或輸入朋友的房號</label>
+      <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="4 碼房號" autocapitalize="characters"><button class="ghost" id="joinCodeBtn">加入</button></div>
+    </div>
+    <div id="hashBox" class="hide">
+      <p class="muted">要加入房間 <b id="hashCode"></b></p>
+      <div class="actions" style="justify-content:flex-start"><button id="joinHashBtn">加入房間</button><button class="ghost" id="otherBtn">改開新房間</button></div>
+    </div>
+    <p class="muted" id="joinErr" role="alert"></p>
+  </section>
+
+  <!-- 遊戲畫面 -->
+  <section class="card hide" id="gameView">
+    <div class="status"><span id="roundTxt"></span><span id="scoreTxt"></span></div>
+    <div id="lobbyBox">
+      <h2>等待大家到齊</h2>
+      <p class="muted" style="margin:0 0 8px">把連結傳給朋友，對方打開就會進到同一個房間。</p>
+      <div class="share" id="shareTxt"></div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="ghost small" id="copyBtn">複製邀請連結</button>
+        <button id="startBtn">開始遊戲</button>
+      </div>
+      <p class="muted" id="startHint"></p>
+    </div>
+    <div id="playBox" class="hide">
+      <div class="wheelbox"><svg id="wheel" viewBox="0 0 400 222" role="slider" aria-label="指針" aria-valuemin="0" aria-valuemax="180" tabindex="0"></svg></div>
+      <div class="ends"><div id="leftEnd"></div><div id="rightEnd"></div></div>
+      <div class="clue" id="clueTxt"></div>
+      <p class="say" id="sayTxt"></p>
+      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="輸入你的線索"><button id="clueBtn">送出線索</button></div>
+      <div class="pts hide" id="ptsTxt"></div>
+      <div class="actions" id="actBox"></div>
+    </div>
+    <div id="endBox" class="hide">
+      <p class="muted" style="text-align:center;margin:0">總分</p>
+      <div class="big" id="finalTxt"></div>
+      <p class="pts" id="rankTxt"></p>
+      <ul class="log" id="logList"></ul>
+      <div class="actions"><button id="againBtn">再玩一局</button></div>
+    </div>
+  </section>
+
+  <section class="card hide" id="peopleView">
+    <h2>玩家</h2>
+    <div class="players" id="players"></div>
+  </section>
+
+  <section class="card chat hide" id="chatView">
+    <h2 style="margin:0">聊天室</h2>
+    <div id="msgs" aria-live="polite"></div>
+    <form class="row" id="chatForm"><input type="text" id="chatIn" maxlength="200" placeholder="說點什麼…" autocomplete="off"><button>送出</button></form>
+  </section>
+  <p class="net" id="netTxt"></p>
+</main>
+
+<script src="cards.js"></script>
+<script type="module">
+{
+const $ = id => document.getElementById(id);
+const CARDS = window.WL_CARDS;
+const ROUNDS = 10;
+const CX = 200, CY = 206, R = 186;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const params = new URLSearchParams(location.search);
+
+// ---------- 連線層：正式版用 Trystero（瀏覽器直連），?local 用同瀏覽器分頁模擬 ----------
+function mockJoin(code) {
+  const bc = new BroadcastChannel('wl-mock-' + code);
+  const uid = 'u' + Math.random().toString(36).slice(2, 9);
+  const S = {}, U = {}, sl = {}, ul = {}, peers = {}, jl = [], ll = [];
+  let clock = 0;
+  const ts = () => Math.max(Date.now(), ++clock);
+  const post = m => bc.postMessage({ ...m, from: uid });
+  const newer = (a, b) => !b || a.ts > b.ts || (a.ts === b.ts && a.by > b.by);
+  const applyS = (ns, rec) => { if (newer(rec, S[ns])) { const prev = S[ns]?.val; S[ns] = rec; (sl[ns] || []).forEach(f => f(rec.val, { userId: rec.by, prev })); } };
+  const applyU = (ns, id, rec) => { U[ns] ??= {}; if (newer(rec, U[ns][id])) { U[ns][id] = rec; (ul[ns] || []).forEach(f => f(rec.val, { userId: id, self: id === uid })); } };
+  const dump = () => { for (const ns in S) post({ t: 's', ns, rec: S[ns] }); for (const ns in U) if (U[ns][uid]) post({ t: 'u', ns, rec: U[ns][uid] }); };
+  bc.onmessage = ({ data: m }) => {
+    if (m.t === 'bye') { delete peers[m.from]; ll.forEach(f => f({ userId: m.from })); return; }
+    if (!peers[m.from]) { peers[m.from] = 1; jl.forEach(f => f({ userId: m.from })); post({ t: 'hi' }); dump(); }
+    if (m.t === 's') applyS(m.ns, m.rec);
+    if (m.t === 'u') applyU(m.ns, m.from, m.rec);
+  };
+  addEventListener('pagehide', () => post({ t: 'bye' }));
+  setTimeout(() => post({ t: 'hi' }), 50);
+  return {
+    ready: Promise.resolve(),
+    getSelf: async () => ({ userId: uid }),
+    getUsers: () => Object.fromEntries(Object.keys(peers).map(k => [k, {}])),
+    onUserJoin: f => jl.push(f), onUserLeave: f => ll.push(f), onError: () => {},
+    makeState(ns, init) {
+      return {
+        get: () => (S[ns] ? S[ns].val : init),
+        async set(next) { const v = typeof next === 'function' ? next(S[ns] ? S[ns].val : init) : next; const rec = { val: v, ts: ts(), by: uid }; applyS(ns, rec); post({ t: 's', ns, rec }); },
+        onChange: f => { (sl[ns] ??= []).push(f); },
+      };
+    },
+    makeUserState(ns, init) {
+      const all = () => Object.fromEntries(Object.entries(U[ns] || {}).map(([k, r]) => [k, r.val]));
+      return {
+        get: (id = uid) => (U[ns]?.[id] ? U[ns][id].val : init),
+        getAll: all,
+        async set(next) { const cur = U[ns]?.[uid]?.val ?? init; const v = typeof next === 'function' ? next(cur) : next; const rec = { val: v, ts: ts(), by: uid }; applyU(ns, uid, rec); post({ t: 'u', ns, rec }); },
+        onChange: f => { (ul[ns] ??= []).push(f); },
+      };
+    },
+  };
+}
+
+async function connect(code) {
+  if (params.has('local')) return mockJoin(code);
+  const { joinRoom } = await import('https://cdn.jsdelivr.net/npm/trystero@0.27.0/+esm');
+  return joinRoom({ appId: 'josephinezulin.github.io/my-games/wavelength', password: 'wl-' + code }, code);
+}
+
+// ---------- 狀態 ----------
+let room, me, code, game, dial, profile, chat;
+let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0;
+
+const initialGame = { phase: 'lobby', round: 0, order: [], pi: 0, psychic: null, card: null, used: [], clue: '', guess: null, target: null, pts: null, score: 0, log: [] };
+
+const online = () => [me, ...Object.keys(room.getUsers()).filter(id => id !== me)];
+const nameOf = id => (profile.get(id) || {}).name || '玩家';
+const G = () => ({ ...initialGame, ...(game.get() || {}) });
+
+function pickCard(used) {
+  const free = CARDS.map((_, i) => i).filter(i => !used.includes(i));
+  const pool = free.length ? free : CARDS.map((_, i) => i);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function secretKey(g) { return `wl:${code}:${g.round}:${g.card}`; }
+function mySecret(g) {
+  const k = secretKey(g);
+  let t = Number(store.get(k));
+  if (!t) { t = 8 + Math.floor(Math.random() * 165); store.set(k, String(t)); }
+  return t;
+}
+function score(guess, target) {
+  const d = Math.abs(guess - target);
+  return d <= 4 ? 4 : d <= 12 ? 3 : d <= 20 ? 2 : 0;
+}
+function rank(s) {
+  const max = ROUNDS * 4, r = s / max;
+  return r >= .75 ? '心靈相通' : r >= .55 ? '默契十足' : r >= .35 ? '還算有默契' : '再多磨合一下';
+}
+
+// ---------- 遊戲動作 ----------
+async function startGame() {
+  const order = online();
+  if (order.length < 2) return;
+  const card = pickCard([]);
+  await game.set({ ...initialGame, phase: 'clue', round: 1, order, pi: 0, psychic: order[0], card, used: [card] });
+  await dial.set(90);
+}
+async function nextRound() {
+  await game.set(p => {
+    const g = { ...initialGame, ...p };
+    if (g.phase !== 'reveal' && g.phase !== 'clue' && g.phase !== 'guess') return p;
+    if (g.round >= ROUNDS) return { ...g, phase: 'end' };
+    const on = online();
+    const order = [...g.order.filter(id => on.includes(id)), ...on.filter(id => !g.order.includes(id))];
+    const prevIdx = order.indexOf(g.psychic);
+    const pi = ((prevIdx === -1 ? g.pi - 1 : prevIdx) + 1 + order.length) % order.length;
+    const card = pickCard(g.used);
+    return { ...g, phase: 'clue', round: g.round + 1, order, pi, psychic: order[pi], card, used: [...g.used, card], clue: '', guess: null, target: null, pts: null };
+  });
+  await dial.set(90);
+}
+async function rerollCard() {
+  await game.set(p => { if (p.phase !== 'clue' || p.psychic !== me) return p; const card = pickCard(p.used); return { ...p, card, used: [...p.used, card] }; });
+}
+async function sendClue() {
+  const clue = $('clueIn').value.trim();
+  if (!clue) return;
+  $('clueIn').value = '';
+  await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue } : p));
+}
+async function lockGuess() {
+  const v = Math.round(localDial);
+  await dial.set(v);
+  await game.set(p => (p.phase === 'guess' ? { ...p, phase: 'locked', guess: v } : p));
+}
+async function revealIfPsychic() {
+  const g = G();
+  if (g.phase !== 'locked' || g.psychic !== me) return;
+  const target = mySecret(g);
+  const pts = score(g.guess, target);
+  await game.set(p => (p.phase === 'locked' && p.round === g.round ? {
+    ...p, phase: 'reveal', target, pts, score: p.score + pts,
+    log: [...p.log, { r: p.round, card: p.card, clue: p.clue, pts, by: nameOf(p.psychic) }],
+  } : p));
+}
+
+// ---------- 轉盤繪製 ----------
+const pt = (a, r) => { const t = a * Math.PI / 180; return [CX - r * Math.cos(t), CY - r * Math.sin(t)]; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function wedge(a1, a2, r, fill) {
+  a1 = clamp(a1, 0, 180); a2 = clamp(a2, 0, 180);
+  if (a2 <= a1) return '';
+  const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
+  return `<path d="M${CX} ${CY}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z" fill="${fill}"/>`;
+}
+function zones(t) {
+  let s = wedge(t - 20, t + 20, R - 6, 'var(--z2)') + wedge(t - 12, t + 12, R - 6, 'var(--z3)') + wedge(t - 4, t + 4, R - 6, 'var(--z4)');
+  [[-16, 2], [-8, 3], [0, 4], [8, 3], [16, 2]].forEach(([o, n]) => {
+    const a = t + o; if (a < 2 || a > 178) return;
+    const [x, y] = pt(a, R - 30);
+    s += `<text x="${x.toFixed(1)}" y="${(y + 6).toFixed(1)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
+  });
+  return s;
+}
+function drawWheel(g, value) {
+  const amPsy = g.psychic === me;
+  const showT = g.phase === 'reveal' ? g.target : (amPsy && (g.phase === 'clue' || g.phase === 'guess' || g.phase === 'locked') ? mySecret(g) : null);
+  const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
+  const needleOn = g.phase !== 'clue' || !amPsy;
+  const [nx, ny] = pt(value, R - 16);
+  let s = `<path d="M${CX - R - 8} ${CY}A${R + 8} ${R + 8} 0 0 1 ${CX + R + 8} ${CY}Z" fill="#0a2b2c"/>`;
+  s += `<path d="M${CX - R} ${CY}A${R} ${R} 0 0 1 ${CX + R} ${CY}Z" fill="#fbf4e6"/>`;
+  if (showT != null) s += zones(showT);
+  else if (g.phase !== 'lobby') s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 96}" text-anchor="middle" font-size="15" font-weight="800" fill="#8a7f69">目標區藏在這裡</text>`;
+  s += ticks;
+  if (needleOn) s += `<line x1="${CX}" y1="${CY}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#1f2a2b" stroke-width="7" stroke-linecap="round"/><circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="9" fill="#e2483d" stroke="#1f2a2b" stroke-width="3"/>`;
+  s += `<circle cx="${CX}" cy="${CY}" r="22" fill="#1f2a2b"/><circle cx="${CX}" cy="${CY}" r="9" fill="#e2483d"/>`;
+  $('wheel').innerHTML = s;
+  $('wheel').setAttribute('aria-valuenow', String(Math.round(value)));
+}
+function canDrag() { const g = G(); return g.phase === 'guess' && g.psychic !== me; }
+function angleFromEvent(e) {
+  const svg = $('wheel'), p = svg.createSVGPoint();
+  p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(svg.getScreenCTM().inverse());
+  const dx = q.x - CX, dy = CY - q.y;
+  let th = Math.atan2(Math.max(dy, 0), dx) * 180 / Math.PI;
+  return clamp(180 - th, 0, 180);
+}
+function pushDial(v) {
+  localDial = v;
+  drawWheel(G(), v);
+  const now = Date.now();
+  clearTimeout(sendTimer);
+  if (now - lastSend > 60) { lastSend = now; dial.set(Math.round(v)); }
+  else sendTimer = setTimeout(() => { lastSend = Date.now(); dial.set(Math.round(localDial)); }, 70);
+}
+
+// ---------- 畫面 ----------
+function text(el, s) { el.textContent = s; }
+function renderPlayers() {
+  const g = G(), on = online();
+  const ids = [...new Set([...on, ...g.order])];
+  const box = $('players');
+  box.replaceChildren(...ids.map(id => {
+    const s = document.createElement('span');
+    s.textContent = nameOf(id) + (id === me ? '（你）' : '') + (id === g.psychic && g.phase !== 'lobby' && g.phase !== 'end' ? '・出題中' : '');
+    if (id === g.psychic && g.phase !== 'lobby' && g.phase !== 'end') s.className = 'psy';
+    if (!on.includes(id)) s.className += ' off';
+    return s;
+  }));
+  const n = on.length;
+  text($('startHint'), n < 2 ? '至少要 2 個人才能開始。朋友連進來可能要等幾秒。' : `目前 ${n} 人在房間裡，人到齊就可以開始。`);
+  $('startBtn').disabled = n < 2;
+}
+function render() {
+  if (!room) return;
+  const g = G(), amPsy = g.psychic === me, on = online();
+  const inGame = !['lobby', 'end'].includes(g.phase);
+  $('lobbyBox').classList.toggle('hide', g.phase !== 'lobby');
+  $('playBox').classList.toggle('hide', !inGame);
+  $('endBox').classList.toggle('hide', g.phase !== 'end');
+  text($('roundTxt'), inGame ? `第 ${g.round} / ${ROUNDS} 回合` : g.phase === 'end' ? '遊戲結束' : '大廳');
+  text($('scoreTxt'), g.phase === 'lobby' ? '' : `總分 ${g.score}`);
+  renderPlayers();
+
+  if (inGame) {
+    const c = CARDS[g.card] || ['', ''];
+    $('leftEnd').innerHTML = '<small>左端</small>'; $('leftEnd').append(c[0]);
+    $('rightEnd').innerHTML = '<small>右端</small>'; $('rightEnd').append(c[1]);
+    if (!dragging) localDial = g.phase === 'reveal' || g.phase === 'locked' ? (g.guess ?? dial.get()) : dial.get();
+    drawWheel(g, localDial);
+    $('wheel').classList.toggle('drag', canDrag());
+    const clue = $('clueTxt'); clue.replaceChildren();
+    if (g.clue) { const sm = document.createElement('small'); sm.textContent = `${nameOf(g.psychic)} 的線索`; clue.append(sm, g.clue); }
+    $('clueForm').classList.toggle('hide', !(g.phase === 'clue' && amPsy));
+    $('ptsTxt').classList.toggle('hide', g.phase !== 'reveal');
+    if (g.phase === 'reveal') text($('ptsTxt'), g.pts ? `+${g.pts} 分` : '沒中，0 分');
+    const psyOn = on.includes(g.psychic);
+    const say = {
+      clue: amPsy ? '看看目標區落在哪，想一個線索讓大家把指針轉過去。' : `等 ${nameOf(g.psychic)} 想線索…`,
+      guess: amPsy ? '大家正在轉指針，你只能看不能說。' : '拖動轉盤上的指針，大家討論好再鎖定。',
+      locked: amPsy ? '揭曉中…' : `答案鎖定，等 ${nameOf(g.psychic)} 揭曉…`,
+      reveal: '紅色中心就是目標，看看差多少。',
+    }[g.phase] || '';
+    text($('sayTxt'), !psyOn && !amPsy && g.phase !== 'reveal' ? `${nameOf(g.psychic)} 離線了，可以跳過這題。` : say);
+    const act = $('actBox'); act.replaceChildren();
+    const btn = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; act.append(b); };
+    if (g.phase === 'clue' && amPsy) btn('換一張題目', rerollCard, 'ghost small');
+    if (g.phase === 'guess' && !amPsy) btn('鎖定答案', lockGuess);
+    if (g.phase === 'reveal') btn(g.round >= ROUNDS ? '看總結' : '下一回合', nextRound);
+    if (!psyOn && !amPsy && (g.phase === 'clue' || g.phase === 'guess' || g.phase === 'locked')) btn('跳過這題', nextRound, 'ghost small');
+  }
+  if (g.phase === 'end') {
+    text($('finalTxt'), `${g.score} / ${ROUNDS * 4}`);
+    text($('rankTxt'), rank(g.score));
+    $('logList').replaceChildren(...g.log.map(l => {
+      const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
+      const c = CARDS[l.card] || ['', ''];
+      a.textContent = `${l.r}. ${c[0]}↔${c[1]}「${l.clue}」（${l.by}）`;
+      b.textContent = `${l.pts} 分`;
+      li.append(a, b); return li;
+    }));
+  }
+  revealIfPsychic();
+}
+function renderChat() {
+  const all = profile ? chat.getAll() : {};
+  const list = [];
+  for (const [id, arr] of Object.entries(all)) for (const m of arr || []) list.push({ ...m, id });
+  list.sort((a, b) => a.t - b.t);
+  const box = $('msgs');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  if (!list.length) { box.innerHTML = '<p class="empty">還沒有訊息，打個招呼吧</p>'; return; }
+  box.replaceChildren(...list.slice(-80).map(m => {
+    const p = document.createElement('p'), b = document.createElement('b');
+    b.textContent = nameOf(m.id);
+    if (m.id === me) p.className = 'me';
+    p.append(b, String(m.x));
+    return p;
+  }));
+  if (atBottom || list[list.length - 1].id === me) box.scrollTop = box.scrollHeight;
+}
+
+// ---------- 進房 ----------
+function newCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({ length: 4 }, () => A[Math.floor(Math.random() * A.length)]).join(''); }
+function hashCode() { const h = location.hash.slice(1).toUpperCase(); return /^[A-Z0-9]{4,6}$/.test(h) ? h : ''; }
+function roomLink() { return location.href.split('#')[0] + '#' + code; }
+
+async function enter(c) {
+  const name = $('nameIn').value.trim();
+  if (!name) { text($('joinErr'), '先輸入暱稱'); $('nameIn').focus(); return; }
+  store.set('wl:name', name);
+  code = c;
+  if (location.hash.slice(1) !== c) history.replaceState(null, '', '#' + c);
+  text($('joinErr'), '連線中…');
+  try { room = await connect(code); } catch (e) { room = null; text($('joinErr'), '連線元件載入失敗，請檢查網路後重新整理。'); return; }
+  me = (await room.getSelf()).userId;
+  game = room.makeState('game', initialGame);
+  dial = room.makeState('dial', 90);
+  profile = room.makeUserState('profile', { name });
+  chat = room.makeUserState('chat', []);
+  await profile.set({ name });
+  game.onChange(render); dial.onChange(() => { if (!dragging) render(); });
+  profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
+  room.onUserJoin(() => render()); room.onUserLeave(() => render());
+  room.onError(e => text($('netTxt'), '連線問題：' + (e && e.code ? e.code : '請重新整理')));
+  $('joinView').classList.add('hide');
+  ['gameView', 'peopleView', 'chatView'].forEach(id => $(id).classList.remove('hide'));
+  $('roomChip').classList.remove('hide'); text($('roomChip'), '房號 ' + code);
+  text($('shareTxt'), roomLink());
+  text($('netTxt'), params.has('local') ? '本機測試模式' : '瀏覽器直連，不經過伺服器。少數公司網路可能連不上，換手機網路試試。');
+  render(); renderChat();
+}
+
+$('nameIn').value = store.get('wl:name') || '';
+function showJoin() {
+  const h = hashCode();
+  $('newBox').classList.toggle('hide', !!h);
+  $('hashBox').classList.toggle('hide', !h);
+  text($('hashCode'), h);
+}
+showJoin();
+$('createBtn').onclick = () => enter(newCode());
+$('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { text($('joinErr'), '房號是 4 碼英數字'); return; } enter(c); };
+$('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinCodeBtn').click(); });
+$('joinHashBtn').onclick = () => enter(hashCode());
+$('otherBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); showJoin(); };
+$('startBtn').onclick = startGame;
+$('againBtn').onclick = startGame;
+$('clueBtn').onclick = sendClue;
+$('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
+$('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(roomLink()); text($('copyBtn'), '已複製'); }
+  catch { text($('copyBtn'), '請手動複製上方連結'); }
+  setTimeout(() => text($('copyBtn'), '複製邀請連結'), 2000);
+};
+$('chatForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const x = $('chatIn').value.trim();
+  if (!x || !chat) return;
+  $('chatIn').value = '';
+  await chat.set(prev => [...(prev || []), { t: Date.now(), x }].slice(-40));
+});
+
+const wheel = $('wheel');
+wheel.addEventListener('pointerdown', e => { if (!canDrag()) return; dragging = true; wheel.setPointerCapture(e.pointerId); pushDial(angleFromEvent(e)); });
+wheel.addEventListener('pointermove', e => { if (dragging) pushDial(angleFromEvent(e)); });
+const endDrag = () => { if (!dragging) return; dragging = false; dial.set(Math.round(localDial)); };
+wheel.addEventListener('pointerup', endDrag); wheel.addEventListener('pointercancel', endDrag);
+wheel.addEventListener('keydown', e => {
+  if (!canDrag()) return;
+  const d = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+  if (d) { e.preventDefault(); pushDial(clamp(localDial + d * (e.shiftKey ? 5 : 1), 0, 180)); }
+});
+addEventListener('hashchange', () => { if (!room) showJoin(); });
+}
+</script>
+</body>
+</html>

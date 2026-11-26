@@ -1,6 +1,6 @@
 # 小遊戲合集
 
-六款可以直接在手機或電腦瀏覽器玩的 HTML 小遊戲，不需要安裝。
+七款可以直接在手機或電腦瀏覽器玩的 HTML 小遊戲，不需要安裝。首頁是遊戲大廳，每款遊戲左上角都有回首頁的按鈕。
 
 線上遊玩：https://josephinezulin.github.io/My-Games/
 
@@ -8,7 +8,8 @@
 
 | 遊戲 | 網址 | 玩法 |
 | --- | --- | --- |
-| 色塊脫逃 | https://josephinezulin.github.io/My-Games/ | 拖動色塊，從相同顏色的出口滑出棋盤。共 50 關，21 關起有石塊與步數限制 |
+| 同頻轉盤 | https://josephinezulin.github.io/My-Games/wavelength/ | 線上多人版 Wavelength：一人看目標區給線索，其他人轉指針，輪流出題，共 10 回合，附聊天室 |
+| 色塊脫逃 | https://josephinezulin.github.io/My-Games/block/ | 拖動色塊，從相同顏色的出口滑出棋盤。共 50 關，21 關起有石塊與步數限制 |
 | 沙漠王朝 | https://josephinezulin.github.io/My-Games/sultan/ | 橫式卡牌遊戲：把蘇丹卡、人物、金幣與物品放進儀式，七天內完成旨意，有支線與多重結局 |
 | 落球作戰 | https://josephinezulin.github.io/My-Games/bounce/ | 倒出彈珠穿過倍增門，把足夠的彈珠接進杯子。共 30 關 |
 | 攻城之王 | https://josephinezulin.github.io/My-Games/lord/ | 左右滑動選擇路線，穿過機關壯大軍隊，攻下敵方城堡，升級英雄、獅鷲與城鎮 |
@@ -17,12 +18,17 @@
 
 所有遊戲都支援手機觸控，進度存在瀏覽器（localStorage）。
 
+同頻轉盤用 Trystero（WebRTC）讓瀏覽器直接互連，不需要伺服器或帳號。開房後把連結傳給朋友即可；網址加上 `?local` 可在同一個瀏覽器開兩個分頁做本機測試。
+
 ## 專案結構
 
 | 路徑 | 用途 |
 | --- | --- |
-| site/index.html | 色塊脫逃 |
-| site/levels.js | 色塊脫逃的關卡資料（由產生器輸出） |
+| site/index.html | 遊戲大廳（首頁） |
+| site/wavelength/index.html | 同頻轉盤 |
+| site/wavelength/cards.js | 同頻轉盤的題庫 |
+| site/block/index.html | 色塊脫逃 |
+| site/block/levels.js | 色塊脫逃的關卡資料（由產生器輸出） |
 | site/sultan/index.html | 沙漠王朝 |
 | site/bounce/index.html | 落球作戰 |
 | site/bounce/engine.js | 落球作戰的物理引擎，網頁與關卡產生器共用 |
@@ -36,7 +42,7 @@
 
 ## 本機執行
 
-用瀏覽器直接開啟 `site/index.html` 即可，其他遊戲可從頁面上方的選單切換。
+在 `site/` 執行 `python3 -m http.server` 後開啟 http://localhost:8000/ ，從大廳選遊戲。
 
 重新產生關卡：
 

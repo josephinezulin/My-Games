@@ -24,6 +24,8 @@
   nav.games { width: 100%; max-width: 480px; padding: 8px 16px 0; font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
   nav.games a { color: var(--ink); opacity: .6; text-decoration: none; font-weight: 600; }
   nav.games a.on { opacity: 1; text-decoration: underline; }
+  nav.games { position: relative; z-index: 9999; }
+  nav.games a.home { display: inline-flex; align-items: center; gap: 4px; opacity: 1; text-decoration: none; }
   header { width: 100%; max-width: 480px; padding: 4px 16px; display: flex; align-items: center; justify-content: space-between; }
   h1 { margin: 0; font-size: 17px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
   header { gap: 8px; }
@@ -83,7 +85,7 @@
 </style>
 </head>
 <body>
-<nav class="games"><a href="../">色塊脫逃</a><a href="../sultan/">沙漠王朝</a><a href="../bounce/">落球作戰</a><a href="../lord/">攻城之王</a><a href="../runner/">王者之路</a><a class="on" href="./">調色師</a></nav>
+<nav class="games"><a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>首頁</span></a></nav>
 <header>
   <h1><span id="lvlName"></span></h1>
   <div class="row"><button id="btnMeter" style="padding:6px 10px;font-size:13px">提示：開</button><button id="btnBrushes" style="padding:6px 10px;font-size:13px">畫筆</button><button id="btnGallery" style="padding:6px 10px;font-size:13px">展間</button><button id="btnLevels" style="padding:6px 10px;font-size:13px">選關</button><button id="btnHelp" style="padding:6px 10px;font-size:13px">說明</button></div>

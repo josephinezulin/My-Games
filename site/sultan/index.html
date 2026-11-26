@@ -50,6 +50,8 @@
   nav.games { font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
   nav.games a { color: var(--muted); text-decoration: none; }
   nav.games a.on { color: var(--gold2); }
+  nav.games { position: relative; z-index: 9999; }
+  nav.games a.home { display: inline-flex; align-items: center; gap: 4px; opacity: 1; text-decoration: none; }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; }
   h1 { margin: 0; font-size: 26px; color: var(--gold2); letter-spacing: 6px; text-shadow: 0 2px 0 #000; }
   .hud { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -228,7 +230,7 @@
     .panel { top: 4px; bottom: 4px; left: 4px; right: 4px; max-height: none; }
     .topbar { padding: 3px 10px; gap: 4px 10px; }
     .topbar h1 { font-size: 16px; letter-spacing: 3px; }
-    nav.games { display: none; }
+    nav.games span { display: none; }
     .chip { padding: 1px 8px; font-size: 12px; }
     .links { font-size: 12px; }
     #btnEnd { padding: 4px 10px; font-size: 13px; }
@@ -280,7 +282,7 @@
 <div class="app">
   <div class="topbar">
     <h1>沙漠王朝</h1>
-    <nav class="games"><a href="../">色塊脫逃</a><a class="on" href="./">沙漠王朝</a><a href="../bounce/">落球作戰</a><a href="../lord/">攻城之王</a><a href="../runner/">王者之路</a><a href="../color/">調色師</a></nav>
+    <nav class="games"><a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>首頁</span></a></nav>
     <div class="hud">
       <div class="chip">第<b id="sDay">1</b> / 56 天</div>
       <div class="chip">金幣<b id="sGold">0</b></div>
