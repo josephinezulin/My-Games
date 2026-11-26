@@ -195,6 +195,10 @@
   #netCard .peers { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
   #netCard .peers i { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; font-weight: 900; }
   #netCard .peers i.lost { filter: grayscale(1); opacity: .45; }
+  #netCard .lines { display: flex; gap: 6px; margin-top: 10px; }
+  #netCard .lines b { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+  #netCard .lines b.up { background: #3ddc97; }
+  #netCard .lines b.p2p.up { background: #2f6fd6; }
   #netCard .hint { margin: 10px 0 0; font-size: 14px; color: var(--muted); font-weight: 700; }
   #netCard button { width: 100%; margin-top: 12px; }
   .av.off > i { filter: grayscale(1); opacity: .45; }
@@ -273,6 +277,7 @@
 <section id="netCard" role="dialog" aria-label="連線狀態">
   <div class="st"><span class="dot" id="netDot2"></span><span id="netTitle"></span></div>
   <div class="peers" id="netPeers"></div>
+  <div class="lines" id="netLines" aria-label="線路"></div>
   <p class="hint" id="netHint"></p>
   <button id="reconnectBtn" class="hide"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>重新連線</span></button>
 </section>
@@ -340,10 +345,152 @@ function mockJoin(code) {
   };
 }
 
+// ---------- 正式連線：MQTT 中繼為主（兩台伺服器同時用），P2P 直連為備援 ----------
+// 每則訊息同時送進所有線路，收到重複的用「最後寫入為準」去重；任何一條通就能玩。
+const DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
+const BROKERS = DEV && params.get('brokers') ? params.get('brokers').split(',') : ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+const MQTT_SRC = DEV && params.get('mqttsrc') ? params.get('mqttsrc') : 'https://cdn.jsdelivr.net/npm/mqtt@5.16.1/dist/mqtt.esm.js';
+const b64 = u8 => btoa(String.fromCharCode(...u8));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function relayJoin(code) {
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('wl-jz:' + code)))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const base = 'wl-jz/v1/' + hash.slice(0, 20);
+  const raw = await crypto.subtle.importKey('raw', enc.encode('wavelength:' + code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('wl-jz-salt'), iterations: 50000, hash: 'SHA-256' }, raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const seal = async obj => { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)))); return b64(iv) + '.' + b64(ct); };
+  const open = async str => { try { const [iv, ct] = String(str).split('.'); return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(ct)))); } catch { return null; } };
+
+  let uid = null;
+  try { uid = sessionStorage.getItem('wl:uid:' + code); } catch {}
+  if (!uid) { uid = 'u' + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem('wl:uid:' + code, uid); } catch {} }
+
+  // 本地資料：共享狀態、每人狀態、在線名單
+  const S = {}, U = {}, sl = {}, ul = {}, jl = [], ll = [], el = [];
+  const heard = {}, gone = {}, online = new Set();
+  let clock = 0;
+  const tick = () => (clock = Math.max(Date.now(), clock + 1));
+  const newer = (a, b) => !b || a.ts > b.ts || (a.ts === b.ts && a.by > b.by);
+  const applyS = (ns, rec) => { if (!rec || typeof rec.ts !== 'number') return; clock = Math.max(clock, rec.ts); if (newer(rec, S[ns])) { S[ns] = rec; (sl[ns] || []).forEach(f => f(rec.val, { userId: rec.by })); } };
+  const applyU = (ns, id, rec) => { if (!rec || typeof rec.ts !== 'number') return; clock = Math.max(clock, rec.ts); U[ns] ??= {}; if (newer(rec, U[ns][id])) { U[ns][id] = rec; (ul[ns] || []).forEach(f => f(rec.val, { userId: id, self: id === uid })); } };
+  function sweep() {
+    const now = Date.now();
+    for (const id of Object.keys(heard)) {
+      const isOn = id !== uid && !gone[id] && now - heard[id] < 45000;
+      if (isOn && !online.has(id)) { online.add(id); jl.forEach(f => f({ userId: id })); }
+      if (!isOn && online.has(id)) { online.delete(id); ll.forEach(f => f({ userId: id })); }
+    }
+  }
+  function seen(id, on = true) { if (!id || id === uid) return; heard[id] = Date.now(); gone[id] = !on; sweep(); }
+  function handle(m) {
+    if (!m || typeof m !== 'object') return;
+    if (m.k === 'p') return seen(m.id, !!m.on);
+    if (m.k === 's') { seen(m.rec && m.rec.by); return applyS(m.ns, m.rec); }
+    if (m.k === 'u') { seen(m.id); return applyU(m.ns, m.id, m.rec); }
+    if (m.k === 'hi') { seen(m.id); p2pDump(); }
+  }
+
+  // --- MQTT 線路 ---
+  const clients = [];
+  let mqttLib = null;
+  try { mqttLib = (await import(MQTT_SRC)).default; } catch (e) { console.warn('mqtt load failed', e); }
+  const willMsg = await seal({ k: 'p', id: uid, on: 0 });
+  const emitErr = code => el.forEach(f => f({ code }));
+  if (mqttLib) for (const url of BROKERS) {
+    const c = mqttLib.connect(url, { keepalive: 20, reconnectPeriod: 2500, connectTimeout: 8000, clean: true,
+      clientId: 'wl_' + uid + '_' + Math.random().toString(36).slice(2, 6),
+      will: { topic: `${base}/p/${uid}`, payload: willMsg, retain: true, qos: 0 } });
+    c.on('connect', async () => {
+      c.subscribe(base + '/#', { qos: 0 });
+      c.publish(`${base}/p/${uid}`, await seal({ k: 'p', id: uid, on: 1 }), { retain: true });
+      for (const ns in U) if (U[ns][uid]) c.publish(`${base}/u/${uid}/${ns}`, await seal({ k: 'u', ns, id: uid, rec: U[ns][uid] }), { retain: true });
+      // 伺服器若重啟會遺失保留資料，重連時把手上最新的共享狀態補回去（較舊的會被自動忽略）
+      for (const ns in S) c.publish(`${base}/s/${ns}`, await seal({ k: 's', ns, rec: S[ns] }), { retain: true });
+      changed();
+    });
+    c.on('message', async (topic, payload) => handle(await open(payload.toString())));
+    c.on('offline', () => { emitErr('relay-offline'); changed(); });
+    c.on('close', changed);
+    c.on('error', () => emitErr('relay-error'));
+    clients.push(c);
+  }
+  const relayUp = () => clients.filter(c => c.connected).length;
+
+  // --- P2P 線路（備援，載入失敗也不影響） ---
+  let p2pSend = null, p2pPeers = 0;
+  async function p2pDump() {
+    if (!p2pSend) return;
+    for (const ns in S) p2pSend(await seal({ k: 's', ns, rec: S[ns] }));
+    for (const ns in U) if (U[ns][uid]) p2pSend(await seal({ k: 'u', ns, id: uid, rec: U[ns][uid] }));
+  }
+  if (!params.has('nop2p')) (async () => {
+    try {
+      const { joinRoom } = await import('https://cdn.jsdelivr.net/npm/trystero@0.27.0/+esm');
+      const r = joinRoom({ appId: 'josephinezulin.github.io/my-games/wavelength', password: 'wl-' + code }, code);
+      const act = r.makeAction('m');
+      p2pSend = data => { try { act.send(data); } catch {} };
+      act.onMessage(async data => handle(await open(data)));
+      r.onPeerJoin(async () => { p2pPeers++; changed(); p2pSend(await seal({ k: 'hi', id: uid })); p2pDump(); });
+      r.onPeerLeave(() => { p2pPeers = Math.max(0, p2pPeers - 1); changed(); });
+      r.onError(() => {});
+    } catch (e) { console.warn('p2p unavailable', e); }
+  })();
+
+  async function broadcast(topic, obj, retain) {
+    const data = await seal(obj);
+    for (const c of clients) if (c.connected) c.publish(topic, data, { retain, qos: 0 });
+    if (p2pSend) p2pSend(data);
+  }
+  const statusL = [];
+  function changed() { statusL.forEach(f => f()); }
+  // 心跳：讓其他人知道我還在
+  setInterval(() => { broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 1 }, true); sweep(); }, 15000);
+  setInterval(sweep, 5000);
+  addEventListener('pagehide', () => { broadcast(`${base}/p/${uid}`, { k: 'p', id: uid, on: 0 }, true); });
+
+  // 等第一台伺服器連上（最多 8 秒），讓保留的遊戲狀態先送到
+  await new Promise(res => {
+    if (!clients.length) return res();
+    const t = setTimeout(res, 8000);
+    clients.forEach(c => c.once('connect', () => setTimeout(() => { clearTimeout(t); res(); }, 600)));
+  });
+
+  return {
+    getSelf: async () => ({ userId: uid }),
+    getUsers: () => Object.fromEntries([...online].map(k => [k, {}])),
+    onUserJoin: f => jl.push(f), onUserLeave: f => ll.push(f), onError: f => el.push(f),
+    onStatus: f => statusL.push(f),
+    status: () => ({ relays: relayUp(), relayTotal: clients.length, p2p: p2pPeers }),
+    makeState(ns, init) {
+      return {
+        get: () => (S[ns] ? S[ns].val : init),
+        async set(next) {
+          const v = typeof next === 'function' ? next(S[ns] ? S[ns].val : init) : next;
+          const rec = { val: v, ts: tick(), by: uid }; applyS(ns, rec);
+          await broadcast(`${base}/s/${ns}`, { k: 's', ns, rec }, true);
+        },
+        onChange: f => { (sl[ns] ??= []).push(f); },
+      };
+    },
+    makeUserState(ns, init) {
+      return {
+        get: (id = uid) => (U[ns]?.[id] ? U[ns][id].val : init),
+        getAll: () => Object.fromEntries(Object.entries(U[ns] || {}).map(([k, r]) => [k, r.val])),
+        async set(next) {
+          const cur = U[ns]?.[uid]?.val ?? init; const v = typeof next === 'function' ? next(cur) : next;
+          const rec = { val: v, ts: tick(), by: uid }; applyU(ns, uid, rec);
+          await broadcast(`${base}/u/${uid}/${ns}`, { k: 'u', ns, id: uid, rec }, true);
+        },
+        onChange: f => { (ul[ns] ??= []).push(f); },
+      };
+    },
+  };
+}
+
 async function connect(code) {
   if (params.has('local')) return mockJoin(code);
-  const { joinRoom } = await import('https://cdn.jsdelivr.net/npm/trystero@0.27.0/+esm');
-  return joinRoom({ appId: 'josephinezulin.github.io/my-games/wavelength', password: 'wl-' + code }, code);
+  return relayJoin(code);
 }
 
 // ---------- 狀態 ----------
@@ -524,8 +671,8 @@ function pushDial(v) {
   if (G().mode !== 'coop') return;
   const now = Date.now();
   clearTimeout(sendTimer);
-  if (now - lastSend > 60) { lastSend = now; dial.set(Math.round(v)); }
-  else sendTimer = setTimeout(() => { lastSend = Date.now(); dial.set(Math.round(localDial)); }, 70);
+  if (now - lastSend > 150) { lastSend = now; dial.set(Math.round(v)); }
+  else sendTimer = setTimeout(() => { lastSend = Date.now(); dial.set(Math.round(localDial)); }, 160);
 }
 
 // ---------- 畫面 ----------
@@ -779,12 +926,14 @@ function netState() {
   const g = G(), peers = online().length - 1;
   const expected = [...new Set(g.order)].filter(id => id !== me);
   const lost = expected.filter(id => !online().includes(id));
+  const st = room.status ? room.status() : { relays: 1, relayTotal: 1, p2p: 0 };
   const recentErr = Date.now() - lastErr < 15000;
-  if (!navigator.onLine) return { cls: 'bad', title: '網路斷了', hint: '檢查 Wi-Fi 或行動網路', fix: true, lost };
-  if (expected.length && peers === 0) return { cls: 'bad', title: '跟大家斷線了', hint: '換行動網路，或按下面重新連線', fix: true, lost };
-  if (recentErr || lost.length) return { cls: 'warn', title: '連線不穩', hint: lost.length ? '灰色頭像的玩家暫時連不上' : '正在重新連線…', fix: recentErr, lost };
-  if (peers === 0) return { cls: 'idle', title: '等朋友加入', hint: '', lost };
-  return { cls: '', title: '連線正常', hint: '', lost };
+  if (!navigator.onLine) return { cls: 'bad', title: '網路斷了', hint: '檢查 Wi-Fi 或行動網路', fix: true, lost, st };
+  if (st.relays === 0 && st.p2p === 0) return { cls: 'bad', title: '連不上伺服器', hint: '正在自動重試，也可以按下面重新連線', fix: true, lost, st };
+  if (lost.length) return { cls: 'warn', title: '有人斷線', hint: '灰色頭像的玩家暫時連不上，會自動重連', fix: false, lost, st };
+  if (st.relays < st.relayTotal && recentErr) return { cls: 'warn', title: '線路切換中', hint: '有一條線路斷了，其他線路還在', fix: false, lost, st };
+  if (peers === 0) return { cls: 'idle', title: '等朋友加入', hint: '', lost, st };
+  return { cls: '', title: '連線正常', hint: '', lost, st };
 }
 function renderNet() {
   const st = netState();
@@ -794,6 +943,7 @@ function renderNet() {
   text($('netHint'), st.hint || '');
   $('netHint').classList.toggle('hide', !st.hint);
   $('reconnectBtn').classList.toggle('hide', !st.fix);
+  if (st.st) { const L = $('netLines'); L.replaceChildren(...Array.from({ length: st.st.relayTotal }, (_, i) => { const b = document.createElement('b'); b.className = i < st.st.relays ? 'up' : ''; b.title = '中繼線路'; return b; }), (() => { const b = document.createElement('b'); b.className = 'p2p' + (st.st.p2p ? ' up' : ''); b.title = 'P2P 直連'; return b; })()); }
   if (room) {
     const on = online(), ids = [...new Set([...G().order, ...on])];
     $('netPeers').replaceChildren(...ids.map(id => { const i = avatarEl(id); if (!on.includes(id)) i.className = 'lost'; i.title = nameOf(id); return i; }));
@@ -829,6 +979,7 @@ async function enter(c, creating = false) {
   game.onChange(render); guessSt.onChange(render);
   dial.onChange(() => { if (!dragging && G().psychic === me) renderWheel(); });
   profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
+  if (room.onStatus) room.onStatus(renderNet);
   room.onUserJoin(() => { render(); renderNet(); }); room.onUserLeave(() => { render(); renderNet(); });
   room.onError(e => { lastErr = Date.now(); lastErrCode = e && e.code ? e.code : ''; renderNet(); });
   setInterval(renderNet, 3000);
