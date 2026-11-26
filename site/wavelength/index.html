@@ -35,7 +35,7 @@
             font-size: 19px; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px var(--bg); transition: box-shadow .25s; }
   .av.me > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #ffffff99; }
   .av.psy > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--gold), 0 0 14px 4px #f4c54266; }
-  .av.off { opacity: .35; }
+  .av.off small { opacity: .5; }
   .av small { display: block; font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .av .crown { position: absolute; top: -13px; left: 50%; transform: translateX(-50%) rotate(-8deg); color: var(--gold); filter: drop-shadow(0 1px 0 #0008); }
   .av .ok { position: absolute; top: -3px; right: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #3ddc97; color: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
@@ -179,13 +179,26 @@
                   padding: 3px 12px 3px 3px; border-radius: 999px; background: #102b2cd9; color: #fff; box-shadow: 0 2px 8px #0006; will-change: transform; }
   #danmaku span i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; }
 
-  /* 連線提示（暫定） */
-  #toast { position: absolute; top: 6px; left: 50%; z-index: 9; transform: translate(-50%, -140%); transition: transform .3s; display: flex; align-items: center; gap: 8px;
-           background: var(--ink); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 16px #0007; white-space: nowrap;
-           opacity: 0; visibility: hidden; transition: transform .3s, opacity .3s, visibility 0s .3s; }
-  #toast.on { transform: translate(-50%, 0); opacity: 1; visibility: visible; transition: transform .3s, opacity .3s; }
-  #toast svg { color: var(--z2); }
-
+  /* 連線燈與狀態卡 */
+  button.chip { min-height: 40px; color: var(--panel); box-shadow: none; font: inherit; font-weight: 800; font-size: 14px; letter-spacing: 1px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 0 3px #3ddc9733; transition: background .3s, box-shadow .3s; }
+  .dot.warn { background: var(--z2); box-shadow: 0 0 0 3px #f4c54240; animation: pulse 1.2s infinite; }
+  .dot.bad { background: var(--accent); box-shadow: 0 0 0 3px #e2483d40; animation: pulse .8s infinite; }
+  .dot.idle { background: #9fb3b3; box-shadow: none; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+  #netCard { position: absolute; top: 4px; right: 12px; z-index: 9; width: min(280px, calc(100% - 24px)); background: var(--panel); color: var(--ink);
+             border-radius: 18px; padding: 14px; box-shadow: 0 14px 34px #000a; transform-origin: calc(100% - 30px) -10px;
+             transform: scale(.7); opacity: 0; visibility: hidden; transition: transform .25s cubic-bezier(.2,.9,.3,1.2), opacity .18s, visibility 0s .25s; }
+  #netCard.on { transform: none; opacity: 1; visibility: visible; transition: transform .25s cubic-bezier(.2,.9,.3,1.2), opacity .18s; }
+  #netCard .st { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 17px; }
+  #netCard .st .dot { width: 14px; height: 14px; }
+  #netCard .peers { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
+  #netCard .peers i { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; font-weight: 900; }
+  #netCard .peers i.lost { filter: grayscale(1); opacity: .45; }
+  #netCard .hint { margin: 10px 0 0; font-size: 14px; color: var(--muted); font-weight: 700; }
+  #netCard button { width: 100%; margin-top: 12px; }
+  .av.off > i { filter: grayscale(1); opacity: .45; }
+  .av .lost { position: absolute; top: 28px; left: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--bg); }
   @media (max-height: 640px) {
     #people { padding-top: 6px; padding-bottom: 4px; } .av > i { width: 38px; height: 38px; font-size: 16px; } .av .sc { top: 25px; }
     .top { padding-top: 4px; padding-bottom: 2px; } .card { padding: 10px 12px; } .clue { font-size: 19px; }
@@ -197,7 +210,7 @@
 <div class="top">
   <a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></a>
   <h1>同頻轉盤</h1>
-  <span class="chip hide" id="roomChip"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20H4z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span id="roomCode"></span></span>
+  <button class="chip hide" id="roomChip" aria-label="連線狀態" aria-expanded="false"><span class="dot idle" id="netDot"></span><span id="roomCode"></span></button>
 </div>
 <div id="people" class="hide" aria-label="玩家"></div>
 
@@ -257,7 +270,12 @@
   <button id="chatClose" aria-label="關閉聊天室"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
   <div id="msgs" aria-live="polite"></div>
 </section>
-<div id="toast" role="status"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3 2 20h20z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 10v4M12 17v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span id="toastTxt"></span></div>
+<section id="netCard" role="dialog" aria-label="連線狀態">
+  <div class="st"><span class="dot" id="netDot2"></span><span id="netTitle"></span></div>
+  <div class="peers" id="netPeers"></div>
+  <p class="hint" id="netHint"></p>
+  <button id="reconnectBtn" class="hide"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>重新連線</span></button>
+</section>
 </div>
 <form id="chatBar" class="hide">
   <button type="button" id="chatOpen" aria-label="聊天室" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span id="badge" class="hide"></span></button>
@@ -529,6 +547,7 @@ function renderPeople() {
     d.title = nameOf(id);
     d.append(avatarEl(id));
     const nm = document.createElement('small'); nm.textContent = id === me ? '我' : nameOf(id); d.append(nm);
+    if (!on.includes(id)) d.append(el('span', 'lost', ICON_LOST));
     if (psy) d.append(el('span', 'crown', SVG.crown(22)));
     else if (locked.includes(id)) d.append(el('span', 'ok', SVG.ok));
     if (g.mode === 'pk' && g.phase !== 'lobby') { const sc = el('span', 'sc'); sc.textContent = String(g.scores[id] || 0); d.append(sc); }
@@ -752,12 +771,38 @@ function toggleChat(open) {
   if (open) { setUnread(0); $('danmaku').replaceChildren(); const box = $('msgs'); box.scrollTop = box.scrollHeight; }
 }
 
-// ---------- 連線提示（暫定：頂端短暫滑出） ----------
-let toastTimer = 0;
-function toast(msg) {
-  text($('toastTxt'), msg);
-  $('toast').classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('on'), 4000);
+// ---------- 連線狀態：房號旁的燈＋頭像斷線標示 ----------
+let lastErr = 0, lastErrCode = '';
+const ICON_LOST = '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M3 3l18 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+function netState() {
+  if (!room) return { cls: 'idle' };
+  const g = G(), peers = online().length - 1;
+  const expected = [...new Set(g.order)].filter(id => id !== me);
+  const lost = expected.filter(id => !online().includes(id));
+  const recentErr = Date.now() - lastErr < 15000;
+  if (!navigator.onLine) return { cls: 'bad', title: '網路斷了', hint: '檢查 Wi-Fi 或行動網路', fix: true, lost };
+  if (expected.length && peers === 0) return { cls: 'bad', title: '跟大家斷線了', hint: '換行動網路，或按下面重新連線', fix: true, lost };
+  if (recentErr || lost.length) return { cls: 'warn', title: '連線不穩', hint: lost.length ? '灰色頭像的玩家暫時連不上' : '正在重新連線…', fix: recentErr, lost };
+  if (peers === 0) return { cls: 'idle', title: '等朋友加入', hint: '', lost };
+  return { cls: '', title: '連線正常', hint: '', lost };
+}
+function renderNet() {
+  const st = netState();
+  $('netDot').className = 'dot ' + st.cls;
+  $('netDot2').className = 'dot ' + st.cls;
+  text($('netTitle'), st.title || '');
+  text($('netHint'), st.hint || '');
+  $('netHint').classList.toggle('hide', !st.hint);
+  $('reconnectBtn').classList.toggle('hide', !st.fix);
+  if (room) {
+    const on = online(), ids = [...new Set([...G().order, ...on])];
+    $('netPeers').replaceChildren(...ids.map(id => { const i = avatarEl(id); if (!on.includes(id)) i.className = 'lost'; i.title = nameOf(id); return i; }));
+  }
+}
+function toggleNet(open) {
+  $('netCard').classList.toggle('on', open);
+  $('roomChip').setAttribute('aria-expanded', String(open));
+  if (open) renderNet();
 }
 
 // ---------- 進房 ----------
@@ -784,12 +829,14 @@ async function enter(c, creating = false) {
   game.onChange(render); guessSt.onChange(render);
   dial.onChange(() => { if (!dragging && G().psychic === me) renderWheel(); });
   profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
-  room.onUserJoin(() => render()); room.onUserLeave(() => render());
-  room.onError(e => toast('連線不穩' + (e && e.code ? `（${e.code}）` : '')));
+  room.onUserJoin(() => { render(); renderNet(); }); room.onUserLeave(() => { render(); renderNet(); });
+  room.onError(e => { lastErr = Date.now(); lastErrCode = e && e.code ? e.code : ''; renderNet(); });
+  setInterval(renderNet, 3000);
+  addEventListener('online', renderNet); addEventListener('offline', renderNet);
   $('joinView').classList.add('hide');
   ['gameView', 'people', 'chatBar', 'roomChip'].forEach(id => $(id).classList.remove('hide'));
   text($('roomCode'), code);
-  render(); renderChat();
+  render(); renderChat(); renderNet();
   if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer }));
 }
 
@@ -801,6 +848,7 @@ function showJoin() {
   text($('hashCode'), h);
 }
 showJoin();
+try { const auto = sessionStorage.getItem('wl:auto'); sessionStorage.removeItem('wl:auto'); if (auto && auto === hashCode() && $('nameIn').value.trim()) setTimeout(() => enter(auto), 0); } catch {}
 renderSeg($('perPick'), wantPer, true);
 $('createBtn').onclick = () => enter(newCode(), true);
 $('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { $('codeIn').focus(); return; } enter(c); };
@@ -825,6 +873,9 @@ $('chatBar').addEventListener('submit', async e => {
   await chat.set(prev => [...(prev || []), { t: Date.now(), x }].slice(-40));
 });
 $('chatOpen').onclick = () => toggleChat(!chatOpen());
+$('roomChip').onclick = e => { e.stopPropagation(); toggleNet(!$('netCard').classList.contains('on')); };
+document.addEventListener('pointerdown', e => { if ($('netCard').classList.contains('on') && !e.target.closest('#netCard, #roomChip')) toggleNet(false); });
+$('reconnectBtn').onclick = () => { try { sessionStorage.setItem('wl:auto', code); } catch {} location.reload(); };
 $('chatClose').onclick = () => toggleChat(false);
 $('scrim').onclick = () => toggleChat(false);
 addEventListener('keydown', e => { if (e.key === 'Escape' && chatOpen()) toggleChat(false); });
