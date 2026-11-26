@@ -47,7 +47,32 @@
   main { height: 100%; display: flex; flex-direction: column; padding: 2px 12px 10px; }
   .card { background: var(--panel); color: var(--ink); border-radius: 20px; padding: 14px; box-shadow: 0 5px 0 #0006; }
   #gameView { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  #joinView { max-height: 100%; overflow: auto; }
+  #joinView { max-height: 100%; display: flex; flex-direction: column; min-height: 0; }
+  #gameView, main { overflow: hidden; }
+
+  /* 公開房間列表 */
+  .rooms { flex: 1; min-height: 72px; overflow-y: auto; margin: 0 -4px; padding: 2px 4px; display: flex; flex-direction: column; gap: 8px; }
+  .rooms .none { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #cbbfa8; font-weight: 800; font-size: 13px; }
+  button.room { width: 100%; justify-content: flex-start; gap: 10px; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); padding: 8px 12px; min-height: 56px; animation: pop .3s backwards; }
+  button.room:active { box-shadow: inset 0 0 0 2px var(--z3); }
+  .room .code { font-size: 17px; letter-spacing: 2px; font-weight: 900; }
+  .room .faces { display: flex; flex: 1; }
+  .room .faces i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 12px; font-weight: 900; margin-left: -6px; box-shadow: 0 0 0 2px #fff; }
+  .room .faces i:first-child { margin-left: 0; }
+  .room .st { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 900; color: var(--muted); white-space: nowrap; }
+  .room .st.live { color: var(--accent); }
+  .room .go { color: var(--muted); }
+  .sect { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 900; margin: 12px 0 8px; }
+  .sect::after { content: ""; flex: 1; height: 2px; background: var(--line); border-radius: 1px; }
+  .priv { display: flex; gap: 6px; }
+  .priv button { flex: 1; min-height: 44px; background: #fff; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line); }
+  .priv button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
+  .priv button:disabled { opacity: 1; } .priv button:disabled[aria-pressed=false] { opacity: .45; }
+
+  /* 輸入線索時：只留轉盤和線索框 */
+  body.typing #chatBar, body.typing #people, body.typing .top, body.typing .status, body.typing .say, body.typing #actBox, body.typing .clue { display: none !important; }
+  body.typing .wheelbox { min-height: 0; }
+  body.chatting #people { display: none; }
 
   input[type=text] { width: 100%; font-size: 16px; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
   input[type=text]:focus { outline: none; border-color: var(--z3); }
@@ -90,7 +115,7 @@
   .prog i { display: block; height: 100%; background: var(--z3); border-radius: 3px; transition: width .4s; }
   .team { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
   #playBox { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .wheelbox { position: relative; flex: 1; min-height: 110px; margin-top: 6px; }
+  .wheelbox { position: relative; flex: 1; min-height: 70px; margin-top: 6px; }
   #wheel { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
   #wheel.drag { cursor: grab; }
   #wheel:focus { outline: none; }
@@ -224,11 +249,16 @@
   <section class="card" id="joinView">
     <input type="text" id="nameIn" maxlength="12" placeholder="暱稱" autocomplete="nickname" aria-label="暱稱">
     <div class="gap"></div>
-    <div id="newBox">
+    <div id="newBox" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="sect"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>公開房間</div>
+      <div class="rooms" id="roomList"></div>
+      <div class="sect"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>開房</div>
+      <div class="priv" id="privPick"></div>
+      <div class="gap" style="height:8px"></div>
       <div class="seg" id="perPick" aria-label="每人出題次數"></div>
-      <div class="gap"></div>
+      <div class="gap" style="height:8px"></div>
       <button id="createBtn" style="width:100%">建立房間</button>
-      <div class="gap"></div>
+      <div class="gap" style="height:8px"></div>
       <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="房號" autocapitalize="characters" aria-label="房號"><button class="ghost" id="joinCodeBtn" aria-label="加入"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     </div>
     <div id="hashBox" class="hide">
@@ -245,6 +275,7 @@
         <span id="mCoop"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="8" cy="9" r="3.2" fill="currentColor"/><circle cx="16" cy="9" r="3.2" fill="currentColor"/><path d="M2.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M10.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>合作</span>
         <span id="mPk"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 4l10 10M4 4h4M4 4v4M20 4 10 14M20 4h-4M20 4v4M7 15l-3 3 2 2 3-3M17 15l3 3-2 2-3-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>對戰</span>
       </div>
+      <div class="priv" id="privLobby"></div>
       <div class="seg" id="perLobby" aria-label="每人出題次數"></div>
       <div class="eq" id="startHint"></div>
       <div class="actions">
@@ -394,7 +425,7 @@ async function relayJoin(code) {
   // --- MQTT 線路 ---
   const clients = [];
   let mqttLib = null;
-  try { mqttLib = (await import(MQTT_SRC)).default; } catch (e) { console.warn('mqtt load failed', e); }
+  mqttLib = await getMqtt();
   const willMsg = await seal({ k: 'p', id: uid, on: 0 });
   const emitErr = code => el.forEach(f => f({ code }));
   if (mqttLib) for (const url of BROKERS) {
@@ -488,6 +519,31 @@ async function relayJoin(code) {
   };
 }
 
+// ---------- 公開房間大廳：所有公開房間把簡介貼到同一個頻道 ----------
+const LOBBY = 'wl-jz/v1/lobby';
+let lobbyBusP = null;
+function getMqtt() { if (!getMqtt.p) getMqtt.p = import(MQTT_SRC).then(m => m.default).catch(() => null); return getMqtt.p; }
+function lobbyConnect() {
+  if (lobbyBusP) return lobbyBusP;
+  lobbyBusP = (async () => {
+    const subs = [];
+    if (params.has('local')) {
+      const bc = new BroadcastChannel('wl-mock-lobby'), mine = {};
+      bc.onmessage = ({ data: m }) => { if (m.t === 'req') { for (const c in mine) bc.postMessage({ t: 'a', code: c, info: mine[c] }); } else if (m.t === 'a') subs.forEach(f => f(m.code, m.info)); };
+      return { publish(code, info) { if (info) mine[code] = info; else delete mine[code]; bc.postMessage({ t: 'a', code, info }); }, on(f) { subs.push(f); bc.postMessage({ t: 'req' }); } };
+    }
+    const mqtt = await getMqtt(), clients = [];
+    if (mqtt) for (const url of BROKERS) {
+      const c = mqtt.connect(url, { keepalive: 30, reconnectPeriod: 3000, connectTimeout: 8000, clientId: 'wlL_' + Math.random().toString(36).slice(2, 10) });
+      c.on('connect', () => c.subscribe(LOBBY + '/+'));
+      c.on('message', (t, p) => { const code = t.split('/').pop(); let info = null; try { const str = p.toString(); info = str ? JSON.parse(str) : null; } catch {} subs.forEach(f => f(code, info)); });
+      clients.push(c);
+    }
+    return { publish(code, info) { for (const c of clients) if (c.connected) c.publish(LOBBY + '/' + code, info ? JSON.stringify(info) : '', { retain: true }); }, on(f) { subs.push(f); } };
+  })();
+  return lobbyBusP;
+}
+
 async function connect(code) {
   if (params.has('local')) return mockJoin(code);
   return relayJoin(code);
@@ -495,9 +551,10 @@ async function connect(code) {
 
 // ---------- 狀態 ----------
 let room, me, code, game, dial, profile, chat, guessSt;
+let wantPub = store.get('wl:pub') !== '0', lobbyBus = null, lastAnn = '';
 let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', wantPer = Number(store.get('wl:per')) || 2, revealing = false, endShown = '';
 
-const initialGame = { phase: 'lobby', host: null, per: 2, mode: 'coop', gid: '', round: 0, total: 0, order: [], psychic: null, card: null, used: [],
+const initialGame = { phase: 'lobby', host: null, pub: false, per: 2, mode: 'coop', gid: '', round: 0, total: 0, order: [], psychic: null, card: null, used: [],
   clue: '', target: null, guesses: {}, results: {}, psyPts: 0, score: 0, scores: {}, log: [] };
 const COLORS = ['#e2483d', '#2f6fd6', '#2f8f6a', '#8e44ad', '#d97706', '#0f766e', '#be185d', '#475569'];
 
@@ -545,7 +602,7 @@ async function startGame() {
   const order = online().sort();
   if (order.length < 2) return;
   const g0 = G(), per = g0.per || 2, card = pickCard([]);
-  await game.set({ ...initialGame, host: g0.host, per, mode: order.length === 2 ? 'coop' : 'pk', gid: Math.random().toString(36).slice(2, 8),
+  await game.set({ ...initialGame, host: g0.host, pub: !!g0.pub, per, mode: order.length === 2 ? 'coop' : 'pk', gid: Math.random().toString(36).slice(2, 8),
     phase: 'clue', round: 1, total: order.length * per, order, psychic: order[0], card, used: [card],
     scores: Object.fromEntries(order.map(id => [id, 0])) });
   await dial.set(90);
@@ -566,7 +623,7 @@ async function rerollCard() {
 }
 async function sendClue() {
   const clue = $('clueIn').value.trim();
-  if (!clue) { $('clueIn').focus(); return; }
+  if (!clue) return;
   $('clueIn').value = '';
   $('clueIn').blur();
   await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue } : p));
@@ -729,6 +786,34 @@ function renderWheel() {
   $('wheel').setAttribute('aria-valuenow', String(Math.round(localDial)));
   $('wheel').classList.toggle('drag', canDrag());
 }
+const ICON_GLOBE = '<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const ICON_LOCK = '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
+function renderPriv(box, pub, enabled) {
+  const mk = (val, icon, label) => {
+    const b = el('button', '', icon + `<span>${label}</span>`);
+    b.setAttribute('aria-pressed', String(pub === val)); b.disabled = !enabled;
+    b.onclick = () => {
+      if (box.id === 'privPick') { wantPub = val; store.set('wl:pub', val ? '1' : '0'); renderPriv(box, val, true); }
+      else game.set(p => (p.phase === 'lobby' || p.phase === 'end' ? { ...p, pub: val } : p));
+    };
+    return b;
+  };
+  box.replaceChildren(mk(true, ICON_GLOBE, '公開'), mk(false, ICON_LOCK, '私人'));
+}
+// 公開房間：由在線玩家中 id 最小的那位負責定時貼簡介；改成私人就撤下
+async function announce(force) {
+  if (!room) return;
+  const g = G(), on = online().sort();
+  if (on[0] !== me) return;
+  lobbyBus = lobbyBus || await lobbyConnect();
+  if (!g.pub) { if (lastAnn && lastAnn !== 'off') lobbyBus.publish(code, null); lastAnn = 'off'; return; }
+  const info = { v: 1, host: nameOf(g.host || me).slice(0, 12), players: online().slice(0, 10).map(id => ({ n: initial(nameOf(id)), c: colorOf(id) })),
+    phase: g.phase, round: g.round, total: g.total, t: Date.now() };
+  const sig = JSON.stringify({ ...info, t: 0 });
+  if (!force && sig === lastAnn) return;
+  lastAnn = sig; lobbyBus.publish(code, info);
+}
+
 function render() {
   if (!room) return;
   const g = G(), amPsy = g.psychic === me, on = online(), n = on.length;
@@ -742,6 +827,7 @@ function render() {
     endShown = '';
     $('mCoop').classList.toggle('on', n <= 2); $('mPk').classList.toggle('on', n > 2);
     renderSeg($('perLobby'), g.per || 2, g.host === me || !g.host);
+    renderPriv($('privLobby'), !!g.pub, g.host === me || !g.host);
     const per = g.per || 2;
     $('startHint').innerHTML = n < 2 ? '<span class="wait"><i></i><i></i><i></i></span>'
       : `<span>${SVG.person}${n}</span><span class="op">×</span><span>${SVG.card(22)}${per}</span><span class="op">=</span><span>${n * per}</span>`;
@@ -786,6 +872,7 @@ function render() {
   }
   if (g.phase === 'end' && endShown !== g.gid) { endShown = g.gid; renderEnd(g); }
   revealIfPsychic(false);
+  announce(false);
 }
 function avatarInline(id) {
   const i = avatarEl(id);
@@ -821,7 +908,7 @@ function countUp(node, to, delay, dur = 700) {
 function renderEnd(g) {
   const box = $('endBox'); box.replaceChildren();
   const again = el('button', '', SVG.again + '<span>再來一局</span>'); again.id = 'againBtn';
-  again.onclick = () => game.set(p => ({ ...initialGame, host: p.host, per: p.per, phase: 'lobby' }));
+  again.onclick = () => game.set(p => ({ ...initialGame, host: p.host, pub: !!p.pub, per: p.per, phase: 'lobby' }));
   if (g.mode === 'coop') {
     const max = g.total * 4, ratio = g.score / max, starsOn = ratio >= .75 ? 3 : ratio >= .5 ? 2 : ratio >= .25 ? 1 : 0;
     const wrapEl = el('div', 'coopEnd');
@@ -988,7 +1075,9 @@ async function enter(c, creating = false) {
   ['gameView', 'people', 'chatBar', 'roomChip'].forEach(id => $(id).classList.remove('hide'));
   text($('roomCode'), code);
   render(); renderChat(); renderNet();
-  if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer }));
+  if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer, pub: wantPub }));
+  setInterval(() => announce(true), 20000);
+  addEventListener('pagehide', () => { if (G().pub && online().length <= 1 && lobbyBus) lobbyBus.publish(code, null); });
 }
 
 $('nameIn').value = store.get('wl:name') || '';
@@ -998,6 +1087,38 @@ function showJoin() {
   $('hashBox').classList.toggle('hide', !h);
   text($('hashCode'), h);
 }
+// 大廳列表
+const lobbyRooms = {};
+function renderRooms() {
+  const box = $('roomList'); if (!box) return;
+  const now = Date.now();
+  const list = Object.entries(lobbyRooms).filter(([c, i]) => i && now - i.t < 60000 && now - i.t > -60000)
+    .sort((a, b) => (a[1].phase === 'lobby' ? 0 : 1) - (b[1].phase === 'lobby' ? 0 : 1) || b[1].t - a[1].t);
+  if (!list.length) { box.innerHTML = `<div class="none">${ICON_GLOBE.replace(/18/g, '30')}<span>目前沒有公開房間</span></div>`; return; }
+  box.replaceChildren(...list.map(([c, i]) => {
+    const b = el('button', 'room');
+    const cd = el('span', 'code'); cd.textContent = c;
+    const faces = el('span', 'faces');
+    (Array.isArray(i.players) ? i.players : []).slice(0, 6).forEach(pl => {
+      const f = document.createElement('i'); f.textContent = String(pl && pl.n || '?').slice(0, 2);
+      f.style.background = COLORS.includes(pl && pl.c) ? pl.c : COLORS[7]; faces.append(f);
+    });
+    const n = Array.isArray(i.players) ? i.players.length : 0;
+    const st = el('span', 'st' + (i.phase && i.phase !== 'lobby' ? ' live' : ''));
+    if (i.phase === 'lobby') st.innerHTML = SVG.person.replace(/22/g, '16') + `<em style="font-style:normal">${n}</em>`;
+    else { st.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>'; st.append(`${Number(i.round) || 0}/${Number(i.total) || 0}`); }
+    const go = el('span', 'go', SVG.next);
+    b.append(cd, faces, st, go);
+    b.setAttribute('aria-label', `加入房間 ${c}`);
+    b.onclick = () => enter(c);
+    return b;
+  }));
+}
+lobbyConnect().then(bus => { lobbyBus = bus; bus.on((c, info) => { if (!/^[A-Z0-9]{4,6}$/.test(c)) return; if (info && typeof info === 'object' && typeof info.t === 'number') lobbyRooms[c] = info; else delete lobbyRooms[c]; if (!room) renderRooms(); }); });
+setInterval(() => { if (!room) renderRooms(); }, 10000);
+renderRooms();
+renderPriv($('privPick'), wantPub, true);
+
 showJoin();
 try { const auto = sessionStorage.getItem('wl:auto'); sessionStorage.removeItem('wl:auto'); if (auto && auto === hashCode() && $('nameIn').value.trim()) setTimeout(() => enter(auto), 0); } catch {}
 renderSeg($('perPick'), wantPer, true);
@@ -1008,7 +1129,13 @@ $('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') (hashCode(
 $('joinHashBtn').onclick = () => enter(hashCode());
 $('otherBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); showJoin(); };
 $('startBtn').onclick = startGame;
-$('clueBtn').onclick = sendClue;
+// 線索送出：用 pointerdown 避免鍵盤收起造成版面跳動而按不到
+$('clueBtn').addEventListener('pointerdown', e => { e.preventDefault(); sendClue(); });
+$('clueBtn').onclick = e => { if (e.detail === 0) sendClue(); };
+$('clueIn').addEventListener('focus', () => document.body.classList.add('typing'));
+$('clueIn').addEventListener('blur', () => document.body.classList.remove('typing'));
+$('chatIn').addEventListener('focus', () => document.body.classList.add('chatting'));
+$('chatIn').addEventListener('blur', () => document.body.classList.remove('chatting'));
 $('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
 $('copyBtn').onclick = async () => {
   const lbl = $('copyBtn').querySelector('span');
