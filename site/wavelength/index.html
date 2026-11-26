@@ -49,7 +49,7 @@
   button.chip { min-height: 40px; color: var(--panel); box-shadow: none; }
 
   /* 頭像 */
-  .face { display: grid; place-items: center; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; line-height: 1; letter-spacing: -1px; overflow: hidden; white-space: nowrap; }
+  .face { flex: none; display: grid; place-items: center; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; line-height: 1; letter-spacing: -1px; overflow: hidden; white-space: nowrap; }
   .face.emo { font-size: 1.15em; letter-spacing: 0; }
   #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 12px; overflow-x: auto; padding: 14px 14px 8px; scrollbar-width: none; }
   #people::-webkit-scrollbar { display: none; }
@@ -179,9 +179,10 @@
   .res .face { width: 28px; height: 28px; font-size: 11px; }
   .res .face.emo { font-size: 16px; }
   .res > div.zero { opacity: .5; }
-  .res svg { color: #c48a12; }
-  .bonus { display: inline-flex; align-items: center; gap: 3px; margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: var(--z2); color: var(--ink); font-size: 13px; animation: burst .6s cubic-bezier(.3,1.7,.5,1) backwards; }
-  .bonus.top { background: var(--accent); color: #fff; }
+  .res svg { flex: none; color: #c48a12; }
+  .res > .bonus { box-shadow: none; padding: 6px 12px; }
+  .bonus { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding: 2px 8px; border-radius: 999px; background: var(--z2); color: var(--ink); font-size: 13px; animation: burst .6s cubic-bezier(.3,1.7,.5,1) backwards; }
+  .bonus.perfect { background: var(--accent); color: #fff; }
   @keyframes burst { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.3) rotate(6deg); } }
   #actBox { flex: none; margin-top: 8px; min-height: 0; }
   .fly { position: fixed; z-index: 30; font-weight: 900; font-size: 20px; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 10px; pointer-events: none; box-shadow: 0 4px 10px #0006; }
@@ -1112,8 +1113,8 @@ function startReveal(g) {
     const gg = G();
     if (gg.mode === 'pk') {
       const chip = el('div', gg.psyPts ? 'pop' : 'zero pop'); chip.append(faceEl(gg.psychic, map)); chip.insertAdjacentHTML('beforeend', SVG.pen(15)); chip.append('+' + gg.psyPts);
-      if (gg.bonus) { const b = el('span', 'bonus' + (gg.bonus === 2 ? ' top' : ''), gg.bonus === 2 ? SVG.target + '全精準 +2' : SVG.ok + '全對 +1'); chip.append(b); if (!fast) setTimeout(() => confetti($('gameView'), 30), 150); }
       res.append(chip);
+      if (gg.bonus) { const b = el('div', 'bonus' + (gg.bonus === 2 ? ' perfect' : ''), (gg.bonus === 2 ? SVG.target + '全精準' : SVG.ok + '全對') + ` +${gg.bonus}`); res.append(b); if (!fast) setTimeout(() => confetti($('gameView'), 30), 150); }
     }
     renderPeople(); render();
   };
@@ -1344,32 +1345,36 @@ function renderEnd(g) {
     return;
   }
   const ranked = shownIds(g).filter(id => g.order.includes(id)).sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
-  const top = g.scores[ranked[0]] || 0, winners = ranked.filter(id => (g.scores[id] || 0) === top);
+  const sc = id => g.scores[id] || 0;
+  const rankOf = id => 1 + ranked.filter(x => sc(x) > sc(id)).length;   // 同分同名次
+  const top = sc(ranked[0]), winners = ranked.filter(id => sc(id) === top);
   const head = el('div', 'winner');
   head.append(winners.map(nameOf).join('、'));
   const sub = document.createElement('small'); sub.textContent = winners.length > 1 ? '平手' : '獲勝'; head.append(sub);
   const wrapEl = el('div', 'podium-wrap'), pod = el('div', 'podium');
-  const slots = [['second', ranked[1], '72%'], ['first', ranked[0], '100%'], ['third', ranked[2], '50%']];
-  const T = { third: 300, second: 1100, first: 1900 };
-  for (const [cls, id, h] of slots) {
-    const col = el('div', 'pcol ' + cls); col.style.setProperty('--h', h);
+  const look = r => (r === 1 ? ['first', '100%', 1900] : r === 2 ? ['second', '72%', 1100] : ['third', '50%', 300]);
+  const T = { first: 1900 };
+  for (const id of [ranked[1], ranked[0], ranked[2]]) {
+    const col = el('div', 'pcol');
     if (id) {
+      const r = rankOf(id), [cls, h, delay] = look(r);
+      col.classList.add(cls); col.style.setProperty('--h', h);
       const who = el('div', 'who'); who.append(faceEl(id, map));
       const nm = document.createElement('small'); nm.textContent = nameOf(id); who.append(nm);
-      if ((g.scores[id] || 0) === top && top > 0) { const cr = el('span', 'crown', SVG.crown(34)); cr.style.animation = `crown .7s ${T.first + 900}ms forwards`; who.append(cr); }
-      const bar = el('div', 'bar'); const rk = document.createElement('b'); rk.textContent = String(ranked.indexOf(id) + 1);
-      const sc = document.createElement('span'), scn = document.createElement('em'); scn.style.fontStyle = 'normal';
-      sc.innerHTML = SVG.star(14); sc.append(scn); bar.append(rk, sc);
-      bar.style.animation = `grow .6s ${T[cls]}ms cubic-bezier(.2,.9,.3,1.1) forwards`;
-      who.style.animation = `rise .45s ${T[cls] + 450}ms forwards`;
-      countUp(scn, g.scores[id] || 0, T[cls] + 200);
+      if (r === 1 && top > 0) { const cr = el('span', 'crown', SVG.crown(34)); cr.style.animation = `crown .7s ${T.first + 900}ms forwards`; who.append(cr); }
+      const bar = el('div', 'bar'); const rk = document.createElement('b'); rk.textContent = String(r);
+      const scs = document.createElement('span'), scn = document.createElement('em'); scn.style.fontStyle = 'normal';
+      scs.innerHTML = SVG.star(14); scs.append(scn); bar.append(rk, scs);
+      bar.style.animation = `grow .6s ${delay}ms cubic-bezier(.2,.9,.3,1.1) forwards`;
+      who.style.animation = `rise .45s ${delay + 450}ms forwards`;
+      countUp(scn, sc(id), delay + 200);
       col.append(bar, who);
     }
     pod.append(col);
   }
   wrapEl.append(pod);
   const rest = el('div', 'rest');
-  ranked.slice(3).forEach((id, i) => { const d = document.createElement('div'); d.append(`${i + 4}.`, faceEl(id, map), `${g.scores[id] || 0}`); rest.append(d); });
+  ranked.slice(3).forEach(id => { const d = document.createElement('div'); d.append(`${rankOf(id)}.`, faceEl(id, map), `${sc(id)}`); rest.append(d); });
   if (ranked.length > 3) { rest.style.opacity = '0'; rest.style.animation = `fadeIn .4s ${T.first + 1400}ms forwards`; }
   box.append(head, wrapEl, rest, again);
   head.style.animation = `zoom .6s ${T.first + 1000}ms forwards`;
@@ -1795,7 +1800,7 @@ wheel.addEventListener('keydown', e => {
 addEventListener('hashchange', () => { if (!room) showJoin(); });
 showView('homeView');
 window.__wlBusy = () => !!room;
-if (DEV) window.__wl = { G: () => G(), me: () => me, avatarMap: () => avatarMap(), seq: () => seq };
+if (DEV) window.__wl = { game: () => game, G: () => G(), me: () => me, avatarMap: () => avatarMap(), seq: () => seq };
 }
 </script>
 </body>
