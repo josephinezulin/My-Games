@@ -2,200 +2,267 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <title>同頻轉盤</title>
 <meta name="description" content="同頻轉盤：線上版 Wavelength。一人看答案給線索，其他人轉動指針，猜中越準分數越高，附聊天室。">
 <style>
-  /* VOICE  熱鬧的派對桌遊，但介面乾淨
+  /* VOICE  熱鬧的派對桌遊，介面用圖示說話，文字越少越好
      IDEA   實體桌遊的半圓轉盤與擋板
-     PICTURE 轉盤本身就是主畫面
+     PICTURE 轉盤本身就是主畫面，整頁固定不捲動
      COLOUR 深青底、奶油色盤面、黃橘紅得分區
-     LAYOUT 手機單欄：上方轉盤與操作，下方玩家與聊天室 */
+     LAYOUT 上：首頁、房號、頭像列｜中：遊戲卡（轉盤自動縮放）｜下：聊天輸入列 */
   :root { --bg: #0e3b3d; --bg2: #13494b; --panel: #fbf4e6; --ink: #1f2a2b; --muted: #6b7778; --line: #e6dcc8;
-          --z2: #f4c542; --z3: #f28c38; --z4: #e2483d; --accent: #e2483d; --ok: #2f8f6a; }
+          --z2: #f4c542; --z3: #f28c38; --z4: #e2483d; --accent: #e2483d; --gold: #f4c542; }
   * { box-sizing: border-box; min-width: 0; }
   html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
-  body { background: var(--bg); color: var(--panel); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
-         height: var(--app-h, 100dvh); display: flex; flex-direction: column; align-items: center; overflow-x: clip; }
-  nav.games { width: 100%; max-width: 520px; padding: 10px 16px 0; font-size: 14px; display: flex; align-items: center; gap: 10px; }
-  nav.games a.home { display: inline-flex; align-items: center; gap: 4px; color: var(--panel); text-decoration: none; font-weight: 700; padding: 6px 8px 6px 2px; }
-  header { width: 100%; max-width: 520px; padding: 2px 16px 8px; display: flex; align-items: center; gap: 10px; }
-  h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px; flex: 1; }
-  .chip { background: var(--bg2); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; white-space: nowrap; }
-  nav.games, header { flex: none; }
-  .stage { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 520px; }
-  main { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+  body { background: var(--bg); color: var(--panel); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+         height: var(--app-h, 100dvh); display: flex; flex-direction: column; align-items: center;
+         padding-top: env(safe-area-inset-top); -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  input { -webkit-user-select: text; user-select: text; }
+  svg { display: block; }
 
-  /* 底部固定輸入列 */
-  #chatBar { flex: none; width: 100%; max-width: 520px; display: flex; gap: 8px; align-items: center;
-             padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); box-shadow: 0 -1px 0 #ffffff1f; }
-  #chatBar input { flex: 1; border-color: transparent; }
-  #chatOpen { position: relative; flex: none; width: 46px; padding: 0; display: grid; place-items: center; background: var(--bg2); box-shadow: none; }
-  #chatOpen[aria-expanded=true] { background: var(--z2); color: var(--ink); }
-  #badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff;
-           font-size: 12px; line-height: 20px; text-align: center; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
+  /* 上方列 */
+  .top { flex: none; width: 100%; max-width: 520px; display: flex; align-items: center; gap: 8px; padding: 8px 12px 6px; }
+  .top a.home { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: var(--panel); background: var(--bg2); }
+  h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 1px; flex: 1; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg2); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 800; white-space: nowrap; letter-spacing: 1px; }
 
-  /* 全螢幕聊天室（蓋住遊戲區，輸入列仍在下方） */
-  #chatFull { position: absolute; inset: 0; z-index: 5; background: var(--bg); display: flex; flex-direction: column; padding: 0 12px 8px; }
-  #chatFull .head { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; }
-  #chatFull h2 { margin: 0; font-size: 18px; }
-  #chatClose { background: var(--bg2); box-shadow: none; }
-
-  /* 彈幕 */
-  #danmaku { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
-  #danmaku span { position: absolute; left: 0; white-space: nowrap; font-size: 16px; font-weight: 800; padding: 4px 12px; border-radius: 999px;
-                  background: #102b2ccc; color: #fff; box-shadow: 0 2px 6px #0005; will-change: transform; }
-  #danmaku span b { color: var(--z2); margin-right: 6px; }
-  #danmaku span.me { background: #e2483de6; }
-  #danmaku span.me b { color: #fff; }
-  .card { background: var(--panel); color: var(--ink); border-radius: 18px; padding: 16px; box-shadow: 0 6px 0 #0006; }
-  .card h2 { margin: 0 0 10px; font-size: 17px; }
-  .muted { color: var(--muted); font-size: 14px; }
-  label { display: block; font-size: 14px; font-weight: 700; margin: 10px 0 4px; }
-  input[type=text] { width: 100%; font-size: 16px; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
-  input[type=text]:focus { outline: none; border-color: var(--z3); }
-  button { font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 11px 16px; min-height: 44px; cursor: pointer;
-           background: var(--accent); color: #fff; box-shadow: 0 3px 0 #0004; }
-  button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0004; }
-  button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
-  button.small { min-height: 36px; padding: 6px 12px; font-size: 14px; }
-  button:disabled { opacity: .45; cursor: default; }
-  button:focus-visible, input:focus-visible { outline: 3px solid var(--z2); outline-offset: 2px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .row > input { flex: 1; }
-  .hide { display: none !important; }
-
-  .status { display: flex; justify-content: space-between; font-weight: 800; font-size: 15px; margin-bottom: 6px; }
-  .wheelbox { position: relative; }
-  #wheel { width: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
-  #wheel.drag { cursor: grab; }
-  .ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
-  .ends div { flex: 1; font-weight: 900; font-size: 17px; padding: 8px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); }
-  .ends div:last-child { text-align: right; }
-  .ends small { display: block; font-size: 12px; color: var(--muted); font-weight: 700; }
-  .clue { text-align: center; font-size: 22px; font-weight: 900; margin: 12px 0 4px; min-height: 33px; overflow-wrap: anywhere; }
-  .clue small { display: block; font-size: 13px; color: var(--muted); font-weight: 700; }
-  .say { text-align: center; font-weight: 800; color: var(--muted); margin: 6px 0; }
-  .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-  .big { font-size: 40px; font-weight: 900; text-align: center; line-height: 1.1; }
-  .pts { text-align: center; font-size: 22px; font-weight: 900; margin-top: 6px; }
-
-  /* 玩家頭像列（固定在上方） */
-  #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 10px; overflow-x: auto; padding: 2px 14px 10px; scrollbar-width: none; }
+  /* 玩家頭像列 */
+  #people { flex: none; width: 100%; max-width: 520px; display: flex; gap: 12px; overflow-x: auto; padding: 10px 14px 8px; scrollbar-width: none; }
   #people::-webkit-scrollbar { display: none; }
   .av { position: relative; flex: none; width: 52px; text-align: center; }
-  .av i { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; font-style: normal;
-          font-size: 19px; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px transparent; }
-  .av.me i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--panel); }
+  .av > i { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; font-style: normal;
+            font-size: 19px; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px var(--bg); transition: box-shadow .25s; }
+  .av.me > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #ffffff99; }
+  .av.psy > i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--gold), 0 0 14px 4px #f4c54266; }
   .av.off { opacity: .35; }
-  .av small { display: block; font-size: 12px; font-weight: 700; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .av .bd { position: absolute; top: -3px; right: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
-  .av .bd.psy { background: var(--z2); color: var(--ink); }
-  .av .bd.ok { background: #3ddc97; color: var(--ink); }
+  .av small { display: block; font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .av .crown { position: absolute; top: -13px; left: 50%; transform: translateX(-50%) rotate(-8deg); color: var(--gold); filter: drop-shadow(0 1px 0 #0008); }
+  .av .ok { position: absolute; top: -3px; right: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #3ddc97; color: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
   .av .sc { position: absolute; top: 30px; right: -2px; min-width: 22px; height: 18px; border-radius: 9px; background: var(--panel); color: var(--ink);
             font-size: 12px; font-weight: 900; line-height: 18px; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); }
-  .seg { display: flex; gap: 6px; }
+
+  /* 中間舞台：固定高度，不捲動 */
+  .stage { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 520px; }
+  main { height: 100%; display: flex; flex-direction: column; padding: 2px 12px 10px; }
+  .card { background: var(--panel); color: var(--ink); border-radius: 20px; padding: 14px; box-shadow: 0 5px 0 #0006; }
+  #gameView { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #joinView { max-height: 100%; overflow: auto; }
+
+  input[type=text] { width: 100%; font-size: 16px; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
+  input[type=text]:focus { outline: none; border-color: var(--z3); }
+  button { font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 10px 16px; min-height: 44px; cursor: pointer;
+           background: var(--accent); color: #fff; box-shadow: 0 3px 0 #0004; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0004; }
+  button.ghost { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
+  button.small { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--z2); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; }
+  .hide { display: none !important; }
+  .gap { height: 12px; flex: none; }
+
+  .seg { display: flex; gap: 6px; align-items: center; }
+  .seg .ic { flex: none; width: 36px; display: grid; place-items: center; color: var(--muted); }
   .seg button { flex: 1; min-height: 44px; padding: 0; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--line); }
   .seg button[aria-pressed=true] { background: var(--ink); color: #fff; box-shadow: none; }
   .seg button:disabled { opacity: 1; }
-  .mode { display: flex; gap: 10px; justify-content: center; margin: 10px 0 2px; }
-  .mode span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 14px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); }
-  .mode span.on { background: var(--ink); color: #fff; box-shadow: none; }
-  .res { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-  .res div { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 900; }
-  .res div i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; }
-  .res div.zero { opacity: .5; }
-  .podium li { align-items: center; }
-  .podium li span { display: flex; align-items: center; gap: 8px; }
-  .podium li i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 900; }
-  .players span { background: #fff; box-shadow: inset 0 0 0 2px var(--line); border-radius: 999px; padding: 4px 10px; font-size: 14px; font-weight: 700; }
-  .players span.psy { background: var(--z2); box-shadow: none; }
-  .players span.off { opacity: .45; }
+  .seg button:disabled[aria-pressed=false] { opacity: .45; }
 
-  #msgs { flex: 1; min-height: 0; overflow-y: auto; background: var(--panel); color: var(--ink); border-radius: 16px; padding: 12px 14px; font-size: 16px; }
-  #msgs p { margin: 0 0 6px; overflow-wrap: anywhere; }
-  #msgs b { margin-right: 6px; }
-  #msgs .me b { color: var(--accent); }
-  #msgs .empty { color: var(--muted); text-align: center; margin-top: 30%; }
-  .share { word-break: break-all; font-size: 13px; color: var(--muted); }
-  .log { font-size: 14px; margin: 8px 0 0; padding: 0; list-style: none; }
-  .log li { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding: 5px 0; }
-  .log li b { white-space: nowrap; }
-  .net { font-size: 13px; text-align: center; color: #cfe3e2; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  /* 大廳 */
+  #lobbyBox { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+  .mode { display: flex; gap: 10px; justify-content: center; }
+  .mode span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-weight: 800; font-size: 15px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); color: var(--muted); }
+  .mode span.on { background: var(--ink); color: #fff; box-shadow: none; }
+  .eq { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 24px; font-weight: 900; color: var(--ink); }
+  .eq span { display: inline-flex; align-items: center; gap: 4px; }
+  .eq .op { color: var(--muted); font-size: 20px; }
+  .eq .wait { font-size: 16px; color: var(--muted); }
+  .eq .wait i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 2px; animation: blink 1.2s infinite; }
+  .eq .wait i:nth-child(2) { animation-delay: .2s; } .eq .wait i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+  /* 遊戲中 */
+  .status { flex: none; display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 14px; color: var(--muted); }
+  .prog { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--z3); border-radius: 3px; transition: width .4s; }
+  .team { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
+  #playBox { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .wheelbox { position: relative; flex: 1; min-height: 110px; margin-top: 6px; }
+  #wheel { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #wheel.drag { cursor: grab; }
+  #wheel:focus { outline: none; }
+  .ends { flex: none; display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; }
+  .ends div { flex: 1; display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 16px; padding: 7px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); line-height: 1.25; }
+  .ends div:last-child { justify-content: flex-end; text-align: right; }
+  .ends svg { flex: none; color: var(--muted); }
+  .clue { flex: none; text-align: center; font-size: 22px; font-weight: 900; margin: 8px 0 0; min-height: 32px; overflow-wrap: anywhere; line-height: 1.3; }
+  .clue:empty { min-height: 0; margin: 0; }
+  .say { flex: none; text-align: center; font-weight: 800; color: var(--muted); margin: 6px 0 0; font-size: 15px; min-height: 22px; }
+  #clueForm { flex: none; margin-top: 8px; }
+  .res { flex: none; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .res div { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); font-weight: 900; animation: pop .35s backwards; }
+  .res div i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; }
+  .res div.zero { opacity: .5; }
+  .res div svg { color: #c99a10; }
+  #actBox { flex: none; margin-top: 8px; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+
+  /* 結算 */
+  #endBox { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .winner { flex: none; text-align: center; font-size: 30px; font-weight: 900; line-height: 1.2; min-height: 40px; margin-top: 4px; }
+  .winner small { display: block; font-size: 15px; color: var(--muted); }
+  .podium { flex: 1; min-height: 150px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; padding: 0 4px; }
+  .pcol { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .pcol .who { position: relative; text-align: center; margin-bottom: 6px; opacity: 0; }
+  .pcol .who i { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; margin: 0 auto; color: #fff; font-style: normal; font-size: 22px; font-weight: 900; box-shadow: 0 0 0 3px #fff; }
+  .pcol.first .who i { width: 64px; height: 64px; font-size: 26px; box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--gold); }
+  .pcol .who small { display: block; font-weight: 800; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+  .pcol .crown { position: absolute; top: -26px; left: 50%; color: var(--gold); opacity: 0; filter: drop-shadow(0 2px 0 #0004); }
+  .pcol .bar { width: 100%; border-radius: 12px 12px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; color: #fff; font-weight: 900; transform-origin: bottom; transform: scaleY(0); }
+  .pcol .bar b { font-size: 26px; line-height: 1; }
+  .pcol .bar span { display: inline-flex; align-items: center; gap: 3px; font-size: 15px; opacity: .95; margin-top: 4px; }
+  .pcol.first .bar { height: 100%; background: linear-gradient(#f4c542, #e0a51e); color: var(--ink); }
+  .pcol.second .bar { height: 72%; background: linear-gradient(#b8c4c9, #8fa0a8); }
+  .pcol.third .bar { height: 52%; background: linear-gradient(#e09a62, #c0703a); }
+  .podium-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 30px; }
+  .rest { flex: none; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .rest div { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; }
+  .rest i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 12px; }
+  .coopEnd { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .coopEnd .big { font-size: 56px; font-weight: 900; line-height: 1; }
+  .coopEnd .stars { display: flex; gap: 6px; color: var(--line); }
+  .coopEnd .stars svg.on { color: var(--gold); }
+  #againBtn { flex: none; margin: 10px auto 0; opacity: 0; position: relative; z-index: 4; }
+  .shown { animation: fadeIn .4s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  @keyframes grow { to { transform: scaleY(1); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(.8); } to { opacity: 1; transform: none; } }
+  @keyframes crown { 0% { opacity: 0; transform: translate(-50%, -60px) rotate(-30deg); } 70% { opacity: 1; transform: translate(-50%, 4px) rotate(6deg); } 100% { opacity: 1; transform: translate(-50%, 0) rotate(-6deg); } }
+  @keyframes zoom { from { opacity: 0; transform: scale(.4); } 70% { transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+  .confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; }
+
+  /* 底部輸入列 */
+  #chatBar { flex: none; width: 100%; max-width: 520px; display: flex; gap: 8px; align-items: center; position: relative; z-index: 8;
+             padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); box-shadow: 0 -1px 0 #ffffff1f; }
+  #chatBar input { flex: 1; border-color: transparent; }
+  #chatBar .send { width: 48px; padding: 0; flex: none; }
+  #chatOpen { position: relative; flex: none; width: 46px; padding: 0; background: var(--bg2); box-shadow: none; transition: background .2s, color .2s; }
+  #chatOpen[aria-expanded=true] { background: var(--z2); color: var(--ink); }
+  #badge { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff;
+           font-size: 12px; line-height: 20px; text-align: center; padding: 0 5px; box-shadow: 0 0 0 2px var(--bg); animation: pop .3s; }
+
+  /* 聊天視窗：浮在遊戲上方 */
+  #scrim { position: absolute; inset: 0; z-index: 6; background: #061b1c99; opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
+  #chatWin { position: absolute; left: 10px; right: 10px; top: 4px; bottom: 10px; z-index: 7; background: var(--panel); color: var(--ink);
+             border-radius: 22px; box-shadow: 0 18px 40px #000a; display: flex; flex-direction: column; overflow: hidden;
+             transform-origin: 24px calc(100% + 30px); transform: translateY(30px) scale(.6); opacity: 0; visibility: hidden;
+             transition: transform .34s cubic-bezier(.2, .9, .3, 1.15), opacity .2s, visibility 0s .34s; }
+  .chat-on #scrim { opacity: 1; visibility: visible; transition: opacity .25s; }
+  .chat-on #chatWin { transform: none; opacity: 1; visibility: visible; transition: transform .38s cubic-bezier(.2, .9, .3, 1.15), opacity .2s; }
+  #chatClose { position: absolute; top: 10px; right: 10px; z-index: 1; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--ink); color: #fff; box-shadow: none; }
+  #msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 12px; display: flex; flex-direction: column; gap: 8px; -webkit-user-select: text; user-select: text; }
+  .msg { display: flex; align-items: flex-end; gap: 8px; max-width: 86%; }
+  .msg > i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 13px; font-weight: 900; }
+  .msg p { margin: 0; padding: 8px 12px; border-radius: 16px 16px 16px 4px; background: #fff; box-shadow: inset 0 0 0 2px var(--line); overflow-wrap: anywhere; }
+  .msg.me { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.me p { background: var(--accent); color: #fff; box-shadow: none; border-radius: 16px 16px 4px 16px; }
+  .msg.cont > i { visibility: hidden; }
+  .empty { margin: auto; color: var(--line); }
+
+  /* 彈幕 */
+  #danmaku { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
+  #danmaku span { position: absolute; left: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 16px; font-weight: 800;
+                  padding: 3px 12px 3px 3px; border-radius: 999px; background: #102b2cd9; color: #fff; box-shadow: 0 2px 8px #0006; will-change: transform; }
+  #danmaku span i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; }
+
+  /* 連線提示（暫定） */
+  #toast { position: absolute; top: 6px; left: 50%; z-index: 9; transform: translate(-50%, -140%); transition: transform .3s; display: flex; align-items: center; gap: 8px;
+           background: var(--ink); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 16px #0007; white-space: nowrap;
+           opacity: 0; visibility: hidden; transition: transform .3s, opacity .3s, visibility 0s .3s; }
+  #toast.on { transform: translate(-50%, 0); opacity: 1; visibility: visible; transition: transform .3s, opacity .3s; }
+  #toast svg { color: var(--z2); }
+
+  @media (max-height: 640px) {
+    #people { padding-top: 6px; padding-bottom: 4px; } .av > i { width: 38px; height: 38px; font-size: 16px; } .av .sc { top: 25px; }
+    .top { padding-top: 4px; padding-bottom: 2px; } .card { padding: 10px 12px; } .clue { font-size: 19px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation-duration: .01s !important; animation-delay: 0s !important; } }
 </style>
 </head>
 <body>
-<nav class="games"><a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>首頁</span></a></nav>
-<header>
+<div class="top">
+  <a class="home" href="../" aria-label="回到首頁" title="回到首頁"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></a>
   <h1>同頻轉盤</h1>
-  <span class="chip hide" id="roomChip"></span>
-</header>
+  <span class="chip hide" id="roomChip"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20H4z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span id="roomCode"></span></span>
+</div>
 <div id="people" class="hide" aria-label="玩家"></div>
 
-<div class="stage">
-<main id="main">
+<div class="stage" id="stage">
+<main>
   <!-- 進入畫面 -->
   <section class="card" id="joinView">
-    <label for="nameIn" style="margin-top:0">暱稱</label>
-    <input type="text" id="nameIn" maxlength="12" placeholder="例如：小明" autocomplete="nickname">
+    <input type="text" id="nameIn" maxlength="12" placeholder="暱稱" autocomplete="nickname" aria-label="暱稱">
+    <div class="gap"></div>
     <div id="newBox">
-      <label>每人出題次數</label>
-      <div class="seg" id="perPick"></div>
-      <div class="actions" style="justify-content:stretch;margin-top:14px"><button id="createBtn" style="flex:1">建立房間</button></div>
-      <label for="codeIn">加入房號</label>
-      <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="4 碼房號" autocapitalize="characters"><button class="ghost" id="joinCodeBtn">加入</button></div>
+      <div class="seg" id="perPick" aria-label="每人出題次數"></div>
+      <div class="gap"></div>
+      <button id="createBtn" style="width:100%">建立房間</button>
+      <div class="gap"></div>
+      <div class="row"><input type="text" id="codeIn" maxlength="6" placeholder="房號" autocapitalize="characters" aria-label="房號"><button class="ghost" id="joinCodeBtn" aria-label="加入"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     </div>
     <div id="hashBox" class="hide">
-      <p class="big" style="font-size:32px;margin:10px 0" id="hashCode"></p>
-      <div class="actions" style="justify-content:flex-start"><button id="joinHashBtn">加入</button><button class="ghost" id="otherBtn">開新房間</button></div>
+      <p class="eq" style="font-size:34px;margin:6px 0 14px;letter-spacing:3px" id="hashCode"></p>
+      <div class="row"><button id="joinHashBtn" style="flex:1">加入</button><button class="ghost" id="otherBtn" aria-label="開新房間"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
     </div>
-    <p class="muted" id="joinErr" role="alert"></p>
+    <p id="joinErr" role="alert" style="margin:10px 0 0;color:var(--muted);font-weight:700;text-align:center"></p>
   </section>
 
   <!-- 遊戲畫面 -->
   <section class="card hide" id="gameView">
-    <div class="status"><span id="roundTxt"></span><span id="scoreTxt"></span></div>
     <div id="lobbyBox">
-      <div class="mode"><span id="mCoop">合作 2 人</span><span id="mPk">對戰 3+ 人</span></div>
-      <label>每人出題次數</label>
-      <div class="seg" id="perLobby"></div>
-      <p class="say" id="startHint"></p>
-      <div class="share" id="shareTxt"></div>
+      <div class="mode">
+        <span id="mCoop"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="8" cy="9" r="3.2" fill="currentColor"/><circle cx="16" cy="9" r="3.2" fill="currentColor"/><path d="M2.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M10.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>合作</span>
+        <span id="mPk"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 4l10 10M4 4h4M4 4v4M20 4 10 14M20 4h-4M20 4v4M7 15l-3 3 2 2 3-3M17 15l3 3-2 2-3-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>對戰</span>
+      </div>
+      <div class="seg" id="perLobby" aria-label="每人出題次數"></div>
+      <div class="eq" id="startHint"></div>
       <div class="actions">
-        <button class="ghost" id="copyBtn">複製邀請連結</button>
-        <button id="startBtn">開始</button>
+        <button class="ghost" id="copyBtn"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg><span>邀請</span></button>
+        <button id="startBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>開始</button>
       </div>
     </div>
     <div id="playBox" class="hide">
-      <div class="wheelbox"><svg id="wheel" viewBox="0 0 400 222" role="slider" aria-label="指針" aria-valuemin="0" aria-valuemax="180" tabindex="0"></svg></div>
-      <div class="ends"><div id="leftEnd"></div><div id="rightEnd"></div></div>
+      <div class="status"><span id="roundTxt"></span><div class="prog"><i id="progBar"></i></div><span class="team hide" id="teamTxt"></span></div>
+      <div class="wheelbox"><svg id="wheel" viewBox="0 0 400 222" preserveAspectRatio="xMidYMid meet" role="slider" aria-label="指針" aria-valuemin="0" aria-valuemax="180" tabindex="0"></svg></div>
+      <div class="ends">
+        <div><svg viewBox="0 0 24 24" width="18" height="18"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="leftEnd"></span></div>
+        <div><span id="rightEnd"></span><svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
       <div class="clue" id="clueTxt"></div>
       <p class="say" id="sayTxt"></p>
-      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="你的線索"><button id="clueBtn">送出</button></div>
+      <div id="clueForm" class="row hide"><input type="text" id="clueIn" maxlength="30" placeholder="線索" enterkeyhint="send"><button id="clueBtn" aria-label="送出線索"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button></div>
       <div class="res hide" id="resBox"></div>
       <div class="actions" id="actBox"></div>
     </div>
-    <div id="endBox" class="hide">
-      <div class="big" id="finalTxt"></div>
-      <p class="pts" id="rankTxt"></p>
-      <ul class="log podium" id="podium"></ul>
-      <div class="actions"><button id="againBtn">再玩一局</button></div>
-    </div>
+    <div id="endBox" class="hide"></div>
   </section>
-
-  <p class="net" id="netTxt"></p>
 </main>
 <div id="danmaku" aria-hidden="true"></div>
-<section id="chatFull" class="hide" aria-label="聊天室">
-  <div class="head"><h2>聊天室</h2><button class="small" id="chatClose">回到遊戲</button></div>
+<div id="scrim"></div>
+<section id="chatWin" aria-label="聊天室" aria-hidden="true">
+  <button id="chatClose" aria-label="關閉聊天室"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
   <div id="msgs" aria-live="polite"></div>
 </section>
+<div id="toast" role="status"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3 2 20h20z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 10v4M12 17v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span id="toastTxt"></span></div>
 </div>
 <form id="chatBar" class="hide">
-  <button type="button" id="chatOpen" aria-label="打開聊天室" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span id="badge" class="hide"></span></button>
-  <input type="text" id="chatIn" maxlength="200" placeholder="說點什麼…" autocomplete="off" enterkeyhint="send">
-  <button>送出</button>
+  <button type="button" id="chatOpen" aria-label="聊天室" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span id="badge" class="hide"></span></button>
+  <input type="text" id="chatIn" maxlength="200" placeholder="…" autocomplete="off" enterkeyhint="send" aria-label="訊息">
+  <button class="send" aria-label="送出"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12 20 4l-6 16-2.5-6.5z" fill="currentColor"/></svg></button>
 </form>
 
 <script src="cards.js"></script>
@@ -209,6 +276,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 const params = new URLSearchParams(location.search);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- 連線層：正式版用 Trystero（瀏覽器直連），?local 用同瀏覽器分頁模擬 ----------
 function mockJoin(code) {
@@ -262,7 +330,7 @@ async function connect(code) {
 
 // ---------- 狀態 ----------
 let room, me, code, game, dial, profile, chat, guessSt;
-let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', wantPer = Number(store.get('wl:per')) || 2, revealing = false;
+let dragging = false, localDial = 90, lastSend = 0, sendTimer = 0, dialKey = '', wantPer = Number(store.get('wl:per')) || 2, revealing = false, endShown = '';
 
 const initialGame = { phase: 'lobby', host: null, per: 2, mode: 'coop', gid: '', round: 0, total: 0, order: [], psychic: null, card: null, used: [],
   clue: '', target: null, guesses: {}, results: {}, psyPts: 0, score: 0, scores: {}, log: [] };
@@ -293,16 +361,14 @@ function pickCard(used) {
 function mySecret(g) {
   const k = `wl:${code}:${g.gid}:${g.round}:${g.card}`;
   let t = Number(store.get(k));
-  if (!t) { t = 8 + Math.floor(Math.random() * 165); store.set(k, String(t)); }
+  if (!t) { t = 2 + Math.floor(Math.random() * 177); store.set(k, String(t)); }
   return t;
 }
+// 轉盤兩端相連：靠邊的得分區被切掉的部分會出現在另一端
+function dist(a, b) { const d = Math.abs(a - b) % 180; return Math.min(d, 180 - d); }
 function score(guess, target) {
-  const d = Math.abs(guess - target);
+  const d = dist(guess, target);
   return d <= 4 ? 4 : d <= 12 ? 3 : d <= 20 ? 2 : 0;
-}
-function rank(s, max) {
-  const r = s / max;
-  return r >= .75 ? '心靈相通' : r >= .55 ? '默契十足' : r >= .35 ? '還算有默契' : '再多磨合一下';
 }
 
 // ---------- 遊戲動作 ----------
@@ -335,8 +401,9 @@ async function rerollCard() {
 }
 async function sendClue() {
   const clue = $('clueIn').value.trim();
-  if (!clue) return;
+  if (!clue) { $('clueIn').focus(); return; }
   $('clueIn').value = '';
+  $('clueIn').blur();
   await game.set(p => (p.phase === 'clue' && p.psychic === me ? { ...p, phase: 'guess', clue } : p));
 }
 async function lockGuess() {
@@ -364,20 +431,44 @@ async function revealIfPsychic(force) {
   } finally { revealing = false; }
 }
 
+// ---------- 圖示 ----------
+const SVG = {
+  crown: s => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" fill="currentColor" stroke="#1f2a2b" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  ok: '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  person: '<svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21c.8-4.5 4-7 8-7s7.2 2.5 8 7z" fill="currentColor"/></svg>',
+  card: s => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><rect x="5" y="3" width="14" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M9 9h6M9 13h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  star: s => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M12 2.8l2.8 6 6.4.6-4.8 4.3 1.4 6.4L12 16.8 6.2 20.1l1.4-6.4L2.8 9.4l6.4-.6z" fill="currentColor"/></svg>`,
+  shuffle: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 7h4c4 0 6 10 10 10h4M3 17h4c1.6 0 2.8-1.6 3.8-3.4M14 9.4C15 7.6 16 7 17 7h4M18 4l3 3-3 3M18 14l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+  next: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  skip: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 5l9 7-9 7zM17 5v14" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  again: '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" width="64" height="64"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+};
+
 // ---------- 轉盤繪製 ----------
 const pt = (a, r) => { const t = a * Math.PI / 180; return [CX - r * Math.cos(t), CY - r * Math.sin(t)]; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const f1 = n => n.toFixed(1);
-function wedge(a1, a2, r, fill) {
-  a1 = clamp(a1, 0, 180); a2 = clamp(a2, 0, 180);
-  if (a2 <= a1) return '';
+function arc(a1, a2, r, fill) {
+  if (a2 - a1 < .2) return '';
   const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
   return `<path d="M${CX} ${CY}L${f1(x1)} ${f1(y1)}A${r} ${r} 0 0 1 ${f1(x2)} ${f1(y2)}Z" fill="${fill}"/>`;
 }
+// 超出邊界的部分繞到另一端
+function wedge(a1, a2, r, fill) {
+  let s = arc(Math.max(a1, 0), Math.min(a2, 180), r, fill);
+  if (a1 < 0) s += arc(180 + a1, 180, r, fill);
+  if (a2 > 180) s += arc(0, a2 - 180, r, fill);
+  return s;
+}
+const wrap = a => ((a % 180) + 180) % 180;
 function zones(t) {
   let s = wedge(t - 20, t + 20, R - 6, 'var(--z2)') + wedge(t - 12, t + 12, R - 6, 'var(--z3)') + wedge(t - 4, t + 4, R - 6, 'var(--z4)');
   [[-16, 2], [-8, 3], [0, 4], [8, 3], [16, 2]].forEach(([o, n]) => {
-    const a = t + o; if (a < 2 || a > 178) return;
+    const a = wrap(t + o); if (a < 3 || a > 177) return;
     const [x, y] = pt(a, R - 30);
     s += `<text x="${f1(x)}" y="${f1(y + 6)}" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">${n}</text>`;
   });
@@ -386,19 +477,18 @@ function zones(t) {
 function needle(v, color, label) {
   const [nx, ny] = pt(v, R - 16);
   let s = `<line x1="${CX}" y1="${CY}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#1f2a2b" stroke-width="6" stroke-linecap="round"/>`;
-  if (label) {
-    const [lx, ly] = pt(v, R - 16);
-    s += `<circle cx="${f1(lx)}" cy="${f1(ly)}" r="13" fill="${color}" stroke="#1f2a2b" stroke-width="2.5"/><text x="${f1(lx)}" y="${f1(ly + 5)}" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">${label}</text>`;
-  } else s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="9" fill="${color}" stroke="#1f2a2b" stroke-width="3"/>`;
+  if (label) s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="14" fill="${color}" stroke="#1f2a2b" stroke-width="2.5"/><text x="${f1(nx)}" y="${f1(ny + 5)}" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">${label}</text>`;
+  else s += `<circle cx="${f1(nx)}" cy="${f1(ny)}" r="10" fill="${color}" stroke="#1f2a2b" stroke-width="3"/>`;
   return s;
 }
-function drawWheel(g, showT, needles) {
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function drawWheel(showT, needles) {
   const ticks = Array.from({ length: 19 }, (_, i) => { const [x1, y1] = pt(i * 10, R - 2), [x2, y2] = pt(i * 10, R - 10); return `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="#c9bda5" stroke-width="2"/>`; }).join('');
   let s = `<path d="M${CX - R - 8} ${CY}A${R + 8} ${R + 8} 0 0 1 ${CX + R + 8} ${CY}Z" fill="#0a2b2c"/>`;
   s += `<path d="M${CX - R} ${CY}A${R} ${R} 0 0 1 ${CX + R} ${CY}Z" fill="#fbf4e6"/>`;
   if (showT != null) s += zones(showT);
-  else s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 92}" text-anchor="middle" font-size="40" font-weight="900" fill="#d6cab2">?</text>`;
-  s += ticks + needles.map(n => needle(n.v, n.color, n.label)).join('');
+  else s += `<path d="M${CX - R + 6} ${CY}A${R - 6} ${R - 6} 0 0 1 ${CX + R - 6} ${CY}Z" fill="#e8dfcc"/><text x="${CX}" y="${CY - 92}" text-anchor="middle" font-size="44" font-weight="900" fill="#d6cab2">?</text>`;
+  s += ticks + needles.map(n => needle(n.v, n.color, esc(n.label || ''))).join('');
   s += `<circle cx="${CX}" cy="${CY}" r="22" fill="#1f2a2b"/><circle cx="${CX}" cy="${CY}" r="9" fill="#e2483d"/>`;
   $('wheel').innerHTML = s;
 }
@@ -422,35 +512,35 @@ function pushDial(v) {
 
 // ---------- 畫面 ----------
 function text(el, s) { el.textContent = s; }
-const ICON_EYE = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>';
-const ICON_OK = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-function avatarEl(id, cls) {
-  const el = document.createElement('i');
-  el.style.background = colorOf(id);
-  el.textContent = initial(nameOf(id));
-  if (cls) el.className = cls;
-  return el;
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+function avatarEl(id) {
+  const e = document.createElement('i');
+  e.style.background = colorOf(id);
+  e.textContent = initial(nameOf(id));
+  return e;
 }
 function renderPeople() {
   const g = G(), on = online(), inGame = !['lobby', 'end'].includes(g.phase);
   const locked = g.phase === 'guess' ? lockedOf(g) : [];
   const ids = [...new Set([...g.order, ...on])];
   $('people').replaceChildren(...ids.map(id => {
-    const d = document.createElement('div');
-    d.className = 'av' + (id === me ? ' me' : '') + (on.includes(id) ? '' : ' off');
+    const psy = inGame && id === g.psychic;
+    const d = el('div', 'av' + (id === me ? ' me' : '') + (on.includes(id) ? '' : ' off') + (psy ? ' psy' : ''));
     d.title = nameOf(id);
     d.append(avatarEl(id));
     const nm = document.createElement('small'); nm.textContent = id === me ? '我' : nameOf(id); d.append(nm);
-    if (inGame && id === g.psychic) { const b = document.createElement('span'); b.className = 'bd psy'; b.innerHTML = ICON_EYE; d.append(b); }
-    else if (locked.includes(id)) { const b = document.createElement('span'); b.className = 'bd ok'; b.innerHTML = ICON_OK; d.append(b); }
-    if (g.mode === 'pk' && g.phase !== 'lobby') { const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = String(g.scores[id] || 0); d.append(sc); }
+    if (psy) d.append(el('span', 'crown', SVG.crown(22)));
+    else if (locked.includes(id)) d.append(el('span', 'ok', SVG.ok));
+    if (g.mode === 'pk' && g.phase !== 'lobby') { const sc = el('span', 'sc'); sc.textContent = String(g.scores[id] || 0); d.append(sc); }
     return d;
   }));
 }
 function renderSeg(box, cur, enabled) {
-  box.replaceChildren(...[1, 2, 3, 4, 5].map(n => {
+  const ic = el('span', 'ic', SVG.card(22)); ic.title = '每人出題次數';
+  box.replaceChildren(ic, ...[1, 2, 3, 4, 5].map(n => {
     const b = document.createElement('button');
-    b.textContent = String(n); b.setAttribute('aria-pressed', String(n === cur));
+    b.textContent = '×' + n; b.setAttribute('aria-pressed', String(n === cur));
+    b.setAttribute('aria-label', `每人出 ${n} 題`);
     b.disabled = !enabled;
     b.onclick = () => (box.id === 'perPick' ? (wantPer = n, store.set('wl:per', String(n)), renderSeg(box, n, true)) : setPer(n));
     return b;
@@ -469,7 +559,7 @@ function renderWheel() {
     const lk = myLock(g);
     needles = [{ v: lk ?? localDial, color: colorOf(me), label: lk != null ? initial(nameOf(me)) : '' }];
   }
-  drawWheel(g, showT, needles);
+  drawWheel(showT, needles);
   $('wheel').setAttribute('aria-valuenow', String(Math.round(localDial)));
   $('wheel').classList.toggle('drag', canDrag());
 }
@@ -480,94 +570,163 @@ function render() {
   $('lobbyBox').classList.toggle('hide', g.phase !== 'lobby');
   $('playBox').classList.toggle('hide', !inGame);
   $('endBox').classList.toggle('hide', g.phase !== 'end');
-  text($('roundTxt'), inGame ? `${g.round} / ${g.total}` : '');
-  text($('scoreTxt'), inGame ? (g.mode === 'coop' ? `隊伍 ${g.score} 分` : `我 ${g.scores[me] || 0} 分`) : '');
   renderPeople();
 
   if (g.phase === 'lobby') {
+    endShown = '';
     $('mCoop').classList.toggle('on', n <= 2); $('mPk').classList.toggle('on', n > 2);
     renderSeg($('perLobby'), g.per || 2, g.host === me || !g.host);
-    text($('startHint'), n < 2 ? '等朋友加入…' : `${n} 人 × ${g.per || 2} 題 = ${n * (g.per || 2)} 回合`);
+    const per = g.per || 2;
+    $('startHint').innerHTML = n < 2 ? '<span class="wait"><i></i><i></i><i></i></span>'
+      : `<span>${SVG.person}${n}</span><span class="op">×</span><span>${SVG.card(22)}${per}</span><span class="op">=</span><span>${n * per}</span>`;
     $('startBtn').disabled = n < 2;
   }
   if (inGame) {
     const key = g.gid + ':' + g.round;
     if (key !== dialKey) { dialKey = key; localDial = 90; }
+    text($('roundTxt'), `${g.round}/${g.total}`);
+    $('progBar').style.width = (100 * (g.round - (g.phase === 'reveal' ? 0 : 1)) / g.total) + '%';
+    $('teamTxt').classList.toggle('hide', g.mode !== 'coop');
+    $('teamTxt').innerHTML = SVG.star(16) + g.score;
     const c = CARDS[g.card] || ['', ''];
     text($('leftEnd'), c[0]); text($('rightEnd'), c[1]);
     renderWheel();
-    const clue = $('clueTxt'); clue.replaceChildren();
-    if (g.clue) clue.append(g.clue);
+    text($('clueTxt'), g.clue || '');
     $('clueForm').classList.toggle('hide', !(g.phase === 'clue' && amPsy));
     const psyOn = on.includes(g.psychic), locked = lockedOf(g), need = guessersOf(g);
-    let say = '';
-    if (g.phase === 'clue') say = amPsy ? '給一個線索' : `${nameOf(g.psychic)} 想線索中…`;
-    if (g.phase === 'guess') say = amPsy ? `${locked.length} / ${need.length} 已作答` : myLock(g) != null ? `等其他人 ${locked.length} / ${need.length}` : (g.mode === 'pk' ? '拖指針，各自作答' : '拖指針');
-    if (!psyOn && !amPsy && g.phase !== 'reveal') say = `${nameOf(g.psychic)} 離線了`;
-    text($('sayTxt'), say);
-    // 揭曉結果
+    const say = $('sayTxt'); say.replaceChildren();
+    if (g.phase === 'clue' && !amPsy) say.append(avatarInline(g.psychic), ' 想線索中…');
+    if (g.phase === 'guess') say.textContent = amPsy || myLock(g) != null ? `${locked.length} / ${need.length}` : '';
+    if (!psyOn && !amPsy && g.phase !== 'reveal') { say.replaceChildren(avatarInline(g.psychic), ' 離線'); }
     const res = $('resBox');
     res.classList.toggle('hide', g.phase !== 'reveal');
     if (g.phase === 'reveal') {
       const chip = (id, pts, psy) => {
-        const d = document.createElement('div'); if (!pts) d.className = 'zero';
-        d.append(avatarEl(id)); d.append((psy ? '出題 ' : '') + '+' + pts); return d;
+        const d = el('div', pts ? '' : 'zero'); d.append(avatarEl(id));
+        if (psy) d.insertAdjacentHTML('beforeend', SVG.crown(16));
+        d.append('+' + pts); return d;
       };
-      res.replaceChildren(...Object.entries(g.results).map(([id, p]) => chip(id, p)), ...(g.mode === 'pk' ? [chip(g.psychic, g.psyPts, true)] : []));
+      const chips = [...Object.entries(g.results).map(([id, p]) => chip(id, p)), ...(g.mode === 'pk' ? [chip(g.psychic, g.psyPts, true)] : [])];
+      chips.forEach((c, i) => { c.style.animationDelay = (i * .08) + 's'; });
+      res.replaceChildren(...chips);
     }
     const act = $('actBox'); act.replaceChildren();
-    const btn = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; act.append(b); };
-    if (g.phase === 'clue' && amPsy) btn('換題', rerollCard, 'ghost small');
-    if (g.phase === 'guess' && !amPsy && myLock(g) == null) btn('鎖定', lockGuess);
-    if (g.phase === 'guess' && amPsy && locked.length && locked.length < need.length) btn('直接揭曉', () => revealIfPsychic(true), 'ghost small');
-    if (g.phase === 'reveal') btn(g.round >= g.total ? '看結果' : '下一題', nextRound);
-    if (!psyOn && !amPsy && g.phase !== 'reveal') btn('跳過', nextRound, 'ghost small');
+    const btn = (icon, label, fn, cls) => { const b = el('button', cls || '', icon + `<span>${label}</span>`); b.onclick = fn; act.append(b); };
+    if (g.phase === 'clue' && amPsy) btn(SVG.shuffle, '換題', rerollCard, 'ghost small');
+    if (g.phase === 'guess' && !amPsy && myLock(g) == null) btn(SVG.lock, '鎖定', lockGuess);
+    if (g.phase === 'guess' && amPsy && locked.length && locked.length < need.length) btn(SVG.eye, '揭曉', () => revealIfPsychic(true), 'ghost small');
+    if (g.phase === 'reveal') btn(g.round >= g.total ? SVG.trophy : SVG.next, g.round >= g.total ? '結算' : '下一題', nextRound);
+    if (!psyOn && !amPsy && g.phase !== 'reveal') btn(SVG.skip, '跳過', nextRound, 'ghost small');
   }
-  if (g.phase === 'end') {
-    const pod = $('podium');
-    if (g.mode === 'coop') {
-      text($('finalTxt'), `${g.score} / ${g.total * 4}`);
-      text($('rankTxt'), rank(g.score, g.total * 4));
-      pod.replaceChildren();
-    } else {
-      const ranked = [...new Set([...g.order, ...Object.keys(g.scores)])].sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
-      const top = g.scores[ranked[0]] || 0, winners = ranked.filter(id => (g.scores[id] || 0) === top);
-      text($('finalTxt'), winners.map(nameOf).join('、'));
-      text($('rankTxt'), winners.length > 1 ? '平手' : '冠軍');
-      pod.replaceChildren(...ranked.map((id, i) => {
-        const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
-        a.append(String(i + 1), avatarEl(id), nameOf(id)); b.textContent = `${g.scores[id] || 0} 分`;
-        li.append(a, b); return li;
-      }));
-    }
-    renderSeg($('perLobby'), g.per || 2, true);
-  }
+  if (g.phase === 'end' && endShown !== g.gid) { endShown = g.gid; renderEnd(g); }
   revealIfPsychic(false);
 }
+function avatarInline(id) {
+  const i = avatarEl(id);
+  Object.assign(i.style, { display: 'inline-grid', placeItems: 'center', width: '24px', height: '24px', borderRadius: '50%', color: '#fff', fontStyle: 'normal', fontSize: '12px', verticalAlign: '-6px' });
+  return i;
+}
+
+// ---------- 結算動畫 ----------
+function confetti(box, count = 70) {
+  if (reduceMotion) return;
+  const layer = el('div', 'confetti'); box.append(layer);
+  const H = box.clientHeight + 40, cols = ['#f4c542', '#e2483d', '#2f6fd6', '#3ddc97', '#f28c38', '#8e44ad'];
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement('i');
+    c.style.left = Math.random() * 100 + '%';
+    c.style.background = cols[i % cols.length];
+    layer.append(c);
+    const drift = (Math.random() - .5) * 120, spin = (Math.random() - .5) * 1080;
+    c.animate([{ transform: 'translate(0,0) rotate(0)' }, { transform: `translate(${drift}px, ${H}px) rotate(${spin}deg)` }],
+      { duration: 1800 + Math.random() * 1400, delay: Math.random() * 500, easing: 'cubic-bezier(.3,.6,.5,1)', fill: 'both' });
+  }
+  setTimeout(() => layer.remove(), 4000);
+}
+function countUp(node, to, delay, dur = 700) {
+  if (reduceMotion) { node.textContent = String(to); return; }
+  node.textContent = '0';
+  setTimeout(() => {
+    const t0 = performance.now();
+    const step = t => { const k = Math.min(1, (t - t0) / dur); node.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }, delay);
+}
+function renderEnd(g) {
+  const box = $('endBox'); box.replaceChildren();
+  const again = el('button', '', SVG.again + '<span>再來一局</span>'); again.id = 'againBtn';
+  again.onclick = () => game.set(p => ({ ...initialGame, host: p.host, per: p.per, phase: 'lobby' }));
+  if (g.mode === 'coop') {
+    const max = g.total * 4, ratio = g.score / max, starsOn = ratio >= .75 ? 3 : ratio >= .5 ? 2 : ratio >= .25 ? 1 : 0;
+    const wrapEl = el('div', 'coopEnd');
+    const stars = el('div', 'stars', [0, 1, 2].map(i => SVG.star(44)).join(''));
+    [...stars.children].forEach((s, i) => { if (i < starsOn) { s.classList.add('on'); s.style.animation = `zoom .5s ${0.9 + i * .25}s backwards`; } });
+    const big = el('div', 'big'); const sub = el('div', 'say'); sub.textContent = `/ ${max}`;
+    wrapEl.append(stars, big, sub); box.append(wrapEl, again);
+    countUp(big, g.score, 200, 900);
+    again.style.animationDelay = '1.8s'; again.classList.add('shown');
+    if (starsOn >= 2) setTimeout(() => confetti(box, 50), 1500);
+    return;
+  }
+  const ranked = [...new Set([...g.order, ...Object.keys(g.scores)])].sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0));
+  const top = g.scores[ranked[0]] || 0, winners = ranked.filter(id => (g.scores[id] || 0) === top);
+  const head = el('div', 'winner'); head.style.opacity = '0';
+  head.append(winners.map(nameOf).join('、'));
+  const sub = document.createElement('small'); sub.textContent = winners.length > 1 ? '平手' : '獲勝'; head.append(sub);
+  const wrapEl = el('div', 'podium-wrap'), pod = el('div', 'podium');
+  const slots = [['second', ranked[1], 1], ['first', ranked[0], 2], ['third', ranked[2], 0]];
+  const T = { third: 300, second: 1100, first: 1900 };
+  for (const [cls, id] of slots) {
+    const col = el('div', 'pcol ' + cls);
+    if (id) {
+      const who = el('div', 'who'); who.append(avatarEl(id));
+      const nm = document.createElement('small'); nm.textContent = nameOf(id); who.append(nm);
+      if ((g.scores[id] || 0) === top) { const cr = el('span', 'crown', SVG.crown(34)); cr.style.animation = `crown .7s ${T.first + 900}ms forwards`; who.append(cr); }
+      const bar = el('div', 'bar'); const rk = document.createElement('b'); rk.textContent = String(ranked.indexOf(id) + 1);
+      const sc = document.createElement('span'), scn = document.createElement('em'); scn.style.fontStyle = 'normal';
+      sc.innerHTML = SVG.star(14); sc.append(scn); bar.append(rk, sc);
+      bar.style.animation = `grow .6s ${T[cls]}ms cubic-bezier(.2,.9,.3,1.1) forwards`;
+      who.style.animation = `rise .45s ${T[cls] + 450}ms forwards`;
+      countUp(scn, g.scores[id] || 0, T[cls] + 200);
+      col.append(who, bar);
+    }
+    pod.append(col);
+  }
+  wrapEl.append(pod);
+  const rest = el('div', 'rest');
+  ranked.slice(3).forEach((id, i) => {
+    const d = document.createElement('div'); d.append(String(i + 4) + '.', avatarEl(id), `${g.scores[id] || 0}`); rest.append(d);
+  });
+  if (ranked.length > 3) { rest.style.opacity = '0'; rest.style.animation = `fadeIn .4s ${T.first + 1400}ms forwards`; }
+  box.append(head, wrapEl, rest, again);
+  head.style.animation = `zoom .6s ${T.first + 1000}ms forwards`;
+  again.style.animationDelay = (T.first + 1800) + 'ms'; again.classList.add('shown');
+  setTimeout(() => confetti(box), T.first + 1000);
+}
+
+// ---------- 聊天 ----------
 let seen = null, joinedAt = Date.now(), unread = 0, lanes = [0, 0, 0, 0, 0];
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function chatList() {
   const list = [];
   for (const [id, arr] of Object.entries(chat ? chat.getAll() : {})) for (const m of arr || []) list.push({ ...m, id, k: id + ':' + m.t });
   return list.sort((a, b) => a.t - b.t);
 }
-function chatOpen() { return !$('chatFull').classList.contains('hide'); }
+const chatOpen = () => document.body.classList.contains('chat-on');
 function setUnread(n) { unread = n; $('badge').classList.toggle('hide', !n); text($('badge'), n > 99 ? '99+' : String(n)); }
 function fly(m) {
   const box = $('danmaku'), W = box.clientWidth, H = box.clientHeight;
   const now = Date.now();
   let lane = lanes.indexOf(Math.min(...lanes));
   const free = lanes.findIndex(t => t < now); if (free !== -1) lane = free;
-  const el = document.createElement('span'), b = document.createElement('b');
-  b.textContent = nameOf(m.id); el.append(b, String(m.x));
-  if (m.id === me) el.className = 'me';
-  el.style.top = (Math.max(8, H * 0.04) + lane * 40) + 'px';
-  box.append(el);
-  const w = el.offsetWidth, dur = 6500 + Math.min(String(m.x).length, 40) * 60;
+  const s = document.createElement('span'), av = avatarEl(m.id);
+  s.append(av, String(m.x));
+  s.style.top = (Math.max(6, H * 0.03) + lane * 38) + 'px';
+  box.append(s);
+  const w = s.offsetWidth, dur = 11000 + Math.min(String(m.x).length, 40) * 80;
   lanes[lane] = now + dur * (w + 40) / (W + w);
-  if (reduceMotion) { el.style.transform = `translateX(${Math.max(8, (W - w) / 2)}px)`; setTimeout(() => el.remove(), 3500); return; }
-  const anim = el.animate([{ transform: `translateX(${W}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, easing: 'linear' });
-  anim.onfinish = () => el.remove();
+  if (reduceMotion) { s.style.transform = `translateX(${Math.max(8, (W - w) / 2)}px)`; setTimeout(() => s.remove(), 3500); return; }
+  const anim = s.animate([{ transform: `translateX(${W}px)` }, { transform: `translateX(${-w - 10}px)` }], { duration: dur, easing: 'linear' });
+  anim.onfinish = () => s.remove();
 }
 function renderChat() {
   const list = chatList();
@@ -575,20 +734,30 @@ function renderChat() {
   else for (const m of list) if (!seen.has(m.k)) { seen.add(m.k); if (!chatOpen() && m.t > joinedAt - 3000) { fly(m); if (m.id !== me) setUnread(unread + 1); } }
   const box = $('msgs');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  if (!list.length) { box.innerHTML = '<p class="empty">還沒有訊息，打個招呼吧</p>'; return; }
+  if (!list.length) { box.replaceChildren(el('div', 'empty', SVG.chat)); return; }
+  let prev = null;
   box.replaceChildren(...list.slice(-150).map(m => {
-    const p = document.createElement('p'), b = document.createElement('b');
-    b.textContent = nameOf(m.id);
-    if (m.id === me) p.className = 'me';
-    p.append(b, String(m.x));
-    return p;
+    const row = el('div', 'msg' + (m.id === me ? ' me' : '') + (prev === m.id ? ' cont' : ''));
+    prev = m.id;
+    const av = avatarEl(m.id); av.title = nameOf(m.id);
+    const p = document.createElement('p'); p.textContent = String(m.x);
+    row.append(av, p); return row;
   }));
   if (atBottom || list[list.length - 1].id === me) box.scrollTop = box.scrollHeight;
 }
 function toggleChat(open) {
-  $('chatFull').classList.toggle('hide', !open);
+  document.body.classList.toggle('chat-on', open);
   $('chatOpen').setAttribute('aria-expanded', String(open));
+  $('chatWin').setAttribute('aria-hidden', String(!open));
   if (open) { setUnread(0); $('danmaku').replaceChildren(); const box = $('msgs'); box.scrollTop = box.scrollHeight; }
+}
+
+// ---------- 連線提示（暫定：頂端短暫滑出） ----------
+let toastTimer = 0;
+function toast(msg) {
+  text($('toastTxt'), msg);
+  $('toast').classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('on'), 4000);
 }
 
 // ---------- 進房 ----------
@@ -598,12 +767,12 @@ function roomLink() { return location.href.split('#')[0] + '#' + code; }
 
 async function enter(c, creating = false) {
   const name = $('nameIn').value.trim();
-  if (!name) { text($('joinErr'), '先輸入暱稱'); $('nameIn').focus(); return; }
+  if (!name) { $('nameIn').focus(); $('nameIn').animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250, iterations: 2 }); return; }
   store.set('wl:name', name);
   code = c;
   if (location.hash.slice(1) !== c) history.replaceState(null, '', '#' + c);
-  text($('joinErr'), '連線中…');
-  try { room = await connect(code); } catch (e) { room = null; text($('joinErr'), '連線元件載入失敗，請檢查網路後重新整理。'); return; }
+  $('joinErr').innerHTML = '<span class="eq"><span class="wait"><i></i><i></i><i></i></span></span>';
+  try { room = await connect(code); } catch (e) { room = null; text($('joinErr'), '連線元件載入失敗，請檢查網路'); return; }
   me = (await room.getSelf()).userId;
   joinedAt = Date.now();
   game = room.makeState('game', initialGame);
@@ -616,12 +785,10 @@ async function enter(c, creating = false) {
   dial.onChange(() => { if (!dragging && G().psychic === me) renderWheel(); });
   profile.onChange(() => { render(); renderChat(); }); chat.onChange(renderChat);
   room.onUserJoin(() => render()); room.onUserLeave(() => render());
-  room.onError(e => text($('netTxt'), '連線問題：' + (e && e.code ? e.code : '請重新整理')));
+  room.onError(e => toast('連線不穩' + (e && e.code ? `（${e.code}）` : '')));
   $('joinView').classList.add('hide');
-  ['gameView', 'people', 'chatBar'].forEach(id => $(id).classList.remove('hide'));
-  $('roomChip').classList.remove('hide'); text($('roomChip'), '房號 ' + code);
-  text($('shareTxt'), roomLink());
-  text($('netTxt'), params.has('local') ? '本機測試模式' : '瀏覽器直連，不經過伺服器。少數公司網路可能連不上，換手機網路試試。');
+  ['gameView', 'people', 'chatBar', 'roomChip'].forEach(id => $(id).classList.remove('hide'));
+  text($('roomCode'), code);
   render(); renderChat();
   if (creating) await game.set(p => (p && p.host ? p : { ...initialGame, ...(p || {}), host: me, per: wantPer }));
 }
@@ -634,20 +801,21 @@ function showJoin() {
   text($('hashCode'), h);
 }
 showJoin();
-$('createBtn').onclick = () => enter(newCode(), true);
 renderSeg($('perPick'), wantPer, true);
-$('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { text($('joinErr'), '房號是 4 碼英數字'); return; } enter(c); };
+$('createBtn').onclick = () => enter(newCode(), true);
+$('joinCodeBtn').onclick = () => { const c = $('codeIn').value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,6}$/.test(c)) { $('codeIn').focus(); return; } enter(c); };
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinCodeBtn').click(); });
+$('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') (hashCode() ? $('joinHashBtn') : $('createBtn')).click(); });
 $('joinHashBtn').onclick = () => enter(hashCode());
 $('otherBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); showJoin(); };
 $('startBtn').onclick = startGame;
-$('againBtn').onclick = async () => { await game.set(p => ({ ...initialGame, host: p.host, per: p.per, phase: 'lobby' })); };
 $('clueBtn').onclick = sendClue;
 $('clueIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendClue(); });
 $('copyBtn').onclick = async () => {
-  try { await navigator.clipboard.writeText(roomLink()); text($('copyBtn'), '已複製'); }
-  catch { text($('copyBtn'), '請手動複製上方連結'); }
-  setTimeout(() => text($('copyBtn'), '複製邀請連結'), 2000);
+  const lbl = $('copyBtn').querySelector('span');
+  try { await navigator.clipboard.writeText(roomLink()); lbl.textContent = '已複製'; }
+  catch { lbl.textContent = code; }
+  setTimeout(() => { lbl.textContent = '邀請'; }, 2000);
 };
 $('chatBar').addEventListener('submit', async e => {
   e.preventDefault();
@@ -656,16 +824,17 @@ $('chatBar').addEventListener('submit', async e => {
   $('chatIn').value = '';
   await chat.set(prev => [...(prev || []), { t: Date.now(), x }].slice(-40));
 });
-
 $('chatOpen').onclick = () => toggleChat(!chatOpen());
 $('chatClose').onclick = () => toggleChat(false);
+$('scrim').onclick = () => toggleChat(false);
+addEventListener('keydown', e => { if (e.key === 'Escape' && chatOpen()) toggleChat(false); });
 
 // 手機鍵盤彈出時，讓整個版面貼齊可見區域，上下列保持固定
 const vv = window.visualViewport;
 function fitViewport() {
   const h = vv ? vv.height : innerHeight;
   document.documentElement.style.setProperty('--app-h', h + 'px');
-  if (vv) { document.body.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; }
+  if (vv) { window.scrollTo(0, 0); document.body.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; }
 }
 if (vv) { vv.addEventListener('resize', fitViewport); vv.addEventListener('scroll', fitViewport); }
 addEventListener('resize', fitViewport);
